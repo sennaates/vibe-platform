@@ -2,12 +2,11 @@ import Foundation
 import PencilKit
 
 class DrawingStore {
-    static let shared = DrawingStore()
     private let fileURL: URL
 
-    init() {
-        let paths = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask)
-        fileURL = paths[0].appendingPathComponent("autosave_drawing.data")
+    init(userId: UUID) {
+        let docs = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask)[0]
+        fileURL = docs.appendingPathComponent("autosave_\(userId.uuidString).data")
     }
 
     func save(drawing: PKDrawing) {

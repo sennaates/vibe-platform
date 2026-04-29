@@ -3,12 +3,13 @@ import PencilKit
 
 struct GalleryView: View {
     @Environment(\.dismiss) private var dismiss
+    @Environment(\.horizontalSizeClass) private var sizeClass
     @ObservedObject var galleryStore: GalleryStore
 
-    private let columns = [
-        GridItem(.flexible(), spacing: 12),
-        GridItem(.flexible(), spacing: 12)
-    ]
+    private var columns: [GridItem] {
+        let count = sizeClass == .regular ? 3 : 2
+        return Array(repeating: GridItem(.flexible(), spacing: 14), count: count)
+    }
 
     var body: some View {
         NavigationStack {
@@ -17,11 +18,11 @@ struct GalleryView: View {
                     ContentUnavailableView(
                         "Henüz çizim yok",
                         systemImage: "scribble.variable",
-                        description: Text("Çizimlerini galeriye kaydetmek için kanvas ekranındaki kaydet butonunu kullan.")
+                        description: Text("Kanvas ekranındaki ↓ butonuyla çizimlerini galeriye kaydet.")
                     )
                 } else {
                     ScrollView {
-                        LazyVGrid(columns: columns, spacing: 12) {
+                        LazyVGrid(columns: columns, spacing: 14) {
                             ForEach(galleryStore.records) { record in
                                 GalleryCard(record: record) {
                                     galleryStore.delete(record: record)
@@ -32,7 +33,7 @@ struct GalleryView: View {
                     }
                 }
             }
-            .navigationTitle("Galerим")
+            .navigationTitle("Galeri")
             .navigationBarTitleDisplayMode(.large)
             .toolbar {
                 ToolbarItem(placement: .topBarTrailing) {

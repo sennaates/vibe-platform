@@ -2,15 +2,13 @@ import Foundation
 import PencilKit
 
 class GalleryStore: ObservableObject {
-    static let shared = GalleryStore()
-
     @Published var records: [DrawingRecord] = []
 
     private let indexURL: URL
 
-    init() {
+    init(userId: UUID) {
         let docs = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask)[0]
-        indexURL = docs.appendingPathComponent("gallery_index.json")
+        indexURL = docs.appendingPathComponent("gallery_\(userId.uuidString).json")
         load()
     }
 
@@ -30,7 +28,7 @@ class GalleryStore: ObservableObject {
             let data = try JSONEncoder().encode(records)
             try data.write(to: indexURL)
         } catch {
-            print("❌ Galeri kaydedilemedi: \(error.localizedDescription)")
+            print("❌ Galeri kaydedilemedi: \(error)")
         }
     }
 
