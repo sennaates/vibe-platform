@@ -12,8 +12,8 @@ class GalleryStore: ObservableObject {
         load()
     }
 
-    func save(drawing: PKDrawing, emotion: EmotionState) {
-        let record = DrawingRecord(emotion: emotion, drawing: drawing)
+    func save(drawing: PKDrawing, emotion: EmotionState, bpmHistory: [BpmSample] = []) {
+        let record = DrawingRecord(emotion: emotion, drawing: drawing, bpmHistory: bpmHistory)
         records.insert(record, at: 0)
         persist()
     }

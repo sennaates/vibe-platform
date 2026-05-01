@@ -10,6 +10,11 @@ class BiometricService: ObservableObject {
     @Published var isMocking: Bool = false
     @Published var currentEmotion: EmotionState = .calm
 
+    // MARK: - Oturum BPM Takibi
+    @Published var sessionBpmHistory: [BpmSample] = []
+    private var sessionStartTime: Date?
+    private var sessionTimer: Timer?
+
     func requestAuthorization() {
         guard HKHealthStore.isHealthDataAvailable() else {
             enableMockMode()
@@ -69,5 +74,44 @@ class BiometricService: ObservableObject {
     func setMockBPM(_ bpm: Int) {
         self.currentBPM = bpm
         self.currentEmotion = EmotionClassifier.classify(bpm: bpm)
+    }
+
+    // MARK: - Oturum Takibi
+
+    /// Çizim oturumu başladığında çağır — BPM'yi her 30 saniyede kaydeder
+    func startSession() {
+        sessionBpmHistory = []
+        sessionStartTime = Date()
+        // İlk örneği hemen kaydet
+        sessionBpmHistory.append(BpmSample(secondsFromStart: 0, bpm: currentBPM))
+        // Sonrasını her 30 saniyede bir kaydet
+        sessionTimer?.invalidate()
+        sessionTimer = Timer.scheduledTimer(withTimeInterval: 30, repeats: true) { [weak self] _ in
+            guard let self, let start = self.sessionStartTime else { return }
+            let elapsed = Date().timeIntervalSince(start)
+            self.sessionBpmHistory.append(BpmSample(secondsFromStart: elapsed, bpm: self.currentBPM))
+        }
+    }
+
+    /// Mevcut BPM geçmişini döndürür — oturumu DURDURMAZ (birden fazla kayda izin verir)
+    func snapshotBpmHistory() -> [BpmSample] {
+        // Son anlık ölçümü ekleyerek kapat
+        if let start = sessionStartTime {
+            let elapsed = Date().timeIntervalSince(start)
+            var history = sessionBpmHistory
+            if let last = history.last, abs(last.secondsFromStart - elapsed) > 5 {
+                history.append(BpmSample(secondsFromStart: elapsed, bpm: currentBPM))
+            }
+            return history
+        }
+        return sessionBpmHistory
+    }
+
+    /// Kanvas kapanırken temizle
+    func stopSession() {
+        sessionTimer?.invalidate()
+        sessionTimer = nil
+        sessionBpmHistory = []
+        sessionStartTime = nil
     }
 }
