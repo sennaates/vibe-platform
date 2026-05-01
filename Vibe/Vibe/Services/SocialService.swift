@@ -59,6 +59,19 @@ class SocialService: ObservableObject {
             }
     }
 
+    /// Gerçek zamanlı yorum listener — kayıt güncellendiğinde otomatik tetiklenir
+    /// Returned ListenerRegistration üzerinden `.remove()` çağrılarak temizlenmelidir
+    func listenComments(postId: String, onUpdate: @escaping ([Comment]) -> Void) -> ListenerRegistration {
+        return db.collection("posts").document(postId).collection("comments")
+            .order(by: "createdAt", descending: false)
+            .addSnapshotListener { snapshot, _ in
+                let comments = snapshot?.documents.compactMap {
+                    Comment.from($0.data(), id: $0.documentID)
+                } ?? []
+                onUpdate(comments)
+            }
+    }
+
     // MARK: - Takip
 
     func follow(targetUserId: String, currentUserId: String, completion: @escaping (Error?) -> Void) {
@@ -129,5 +142,32 @@ class SocialService: ObservableObject {
                 } ?? []
                 completion(posts)
             }
+    }
+
+    // MARK: - Gönderi Sil
+
+    func deletePost(_ post: Post, completion: @escaping (Error?) -> Void) {
+        let batch = db.batch()
+
+        // Gönderiyi sil
+        batch.deleteDocument(db.collection("posts").document(post.id))
+
+        // postCount'u düşür
+        batch.updateData(
+            ["postCount": FieldValue.increment(Int64(-1))],
+            forDocument: db.collection("users").document(post.userId)
+        )
+
+        batch.commit { error in
+            if error == nil {
+                // İlişkili beğenileri arka planda temizle (non-blocking)
+                self.db.collection("likes")
+                    .whereField("postId", isEqualTo: post.id)
+                    .getDocuments { snapshot, _ in
+                        snapshot?.documents.forEach { $0.reference.delete() }
+                    }
+            }
+            completion(error)
+        }
     }
 }

@@ -98,17 +98,25 @@ class AuthService: ObservableObject {
         }
     }
 
-    func updateProfile(displayName: String, avatarEmoji: String, bio: String) {
+    func updateProfile(displayName: String, avatarEmoji: String, bio: String, profileColor: ProfileColor? = nil) {
         guard let uid = firebaseUser?.uid else { return }
-        let updates: [String: Any] = [
+        var updates: [String: Any] = [
             "displayName": displayName,
             "avatarEmoji": avatarEmoji,
             "bio": bio
         ]
+        if let profileColor {
+            updates["profileColorRaw"] = profileColor.rawValue
+        }
         db.collection("users").document(uid).updateData(updates) { [weak self] _ in
-            self?.socialUser?.displayName = displayName
-            self?.socialUser?.avatarEmoji = avatarEmoji
-            self?.socialUser?.bio = bio
+            DispatchQueue.main.async {
+                self?.socialUser?.displayName = displayName
+                self?.socialUser?.avatarEmoji = avatarEmoji
+                self?.socialUser?.bio = bio
+                if let profileColor {
+                    self?.socialUser?.profileColorRaw = profileColor.rawValue
+                }
+            }
         }
     }
 }
