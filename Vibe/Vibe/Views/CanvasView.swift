@@ -73,7 +73,11 @@ struct CanvasView: View {
                 canvasView.drawing = saved
             }
             biometricService.requestAuthorization()
+            biometricService.startSession()
             updateUndoState()
+        }
+        .onDisappear {
+            biometricService.stopSession()
         }
         .onChange(of: biometricService.currentEmotion) { _, newEmotion in
             HapticManager.impact(.medium)
@@ -102,18 +106,19 @@ struct CanvasView: View {
 
     private var iPhoneTopBar: some View {
         HStack(spacing: 10) {
-            // Kullanıcı avatarı + geri
+            // Avatar + geri
             Button { dismiss() } label: {
                 HStack(spacing: 8) {
-                    avatarView(emoji: user.avatarEmoji, color: user.profileColor.color, size: 30)
+                    avatarView(emoji: user.avatarEmoji, color: user.profileColor.color, size: 28)
                     Image(systemName: "chevron.left")
-                        .font(.system(size: 13, weight: .semibold))
-                        .foregroundColor(.secondary)
+                        .font(.system(size: 12, weight: .semibold))
+                        .foregroundColor(AppColor.inkMuted)
                 }
                 .padding(.horizontal, 10)
                 .padding(.vertical, 6)
-                .background(.regularMaterial)
-                .cornerRadius(12)
+                .background(AppColor.surface)
+                .clipShape(Capsule())
+                .overlay(Capsule().strokeBorder(AppColor.divider, lineWidth: 0.5))
             }
 
             Spacer()
@@ -122,7 +127,7 @@ struct CanvasView: View {
 
             Spacer()
 
-            // Eylemler menüsü
+            // Menü
             Menu {
                 Button { isShowingMoodInput.toggle() } label: {
                     Label(
@@ -130,35 +135,24 @@ struct CanvasView: View {
                         systemImage: biometricService.isMocking ? "hand.point.up" : "heart.fill"
                     )
                 }
-
                 Divider()
-
                 Button { canvasView.undoManager?.undo(); updateUndoState() } label: {
                     Label("Geri Al", systemImage: "arrow.uturn.backward")
-                }
-                .disabled(!canUndo)
-
+                }.disabled(!canUndo)
                 Button { canvasView.undoManager?.redo(); updateUndoState() } label: {
                     Label("İleri Al", systemImage: "arrow.uturn.forward")
-                }
-                .disabled(!canRedo)
-
+                }.disabled(!canRedo)
                 Divider()
-
                 Button { saveToGallery() } label: {
                     Label("Galeriye Kaydet", systemImage: "square.and.arrow.down")
                 }
-
                 Button { isShowingGallery = true } label: {
                     Label("Galeriyi Aç", systemImage: "photo.stack")
                 }
-
                 Button { isShowingShare = true } label: {
                     Label("Akışa Paylaş", systemImage: "paperplane")
                 }
-
                 Divider()
-
                 Button(role: .destructive) {
                     HapticManager.notification(.warning)
                     canvasView.drawing = PKDrawing()
@@ -168,15 +162,16 @@ struct CanvasView: View {
                     Label("Tuvali Temizle", systemImage: "trash")
                 }
             } label: {
-                Image(systemName: "ellipsis.circle")
-                    .font(.system(size: 22, weight: .semibold))
-                    .foregroundColor(.primary)
-                    .padding(8)
-                    .background(.regularMaterial)
+                Image(systemName: "ellipsis")
+                    .font(.system(size: 18, weight: .semibold))
+                    .foregroundColor(AppColor.ink)
+                    .frame(width: 36, height: 36)
+                    .background(AppColor.surface)
                     .clipShape(Circle())
+                    .overlay(Circle().strokeBorder(AppColor.divider, lineWidth: 0.5))
             }
         }
-        .padding(.horizontal, 16)
+        .padding(.horizontal, AppSpacing.md)
         .padding(.top, 8)
         .padding(.bottom, 6)
     }
@@ -184,34 +179,32 @@ struct CanvasView: View {
     // MARK: - iPad Top Bar
 
     private var iPadTopBar: some View {
-        HStack(spacing: 12) {
-            // Kullanıcı avatarı + geri + BPM
+        HStack(spacing: 10) {
             HStack(spacing: 10) {
                 Button { dismiss() } label: {
                     HStack(spacing: 8) {
                         Image(systemName: "chevron.left")
-                            .font(.system(size: 13, weight: .semibold))
-                        avatarView(emoji: user.avatarEmoji, color: user.profileColor.color, size: 28)
+                            .font(.system(size: 12, weight: .semibold))
+                        avatarView(emoji: user.avatarEmoji, color: user.profileColor.color, size: 26)
                         Text(user.name)
-                            .font(.subheadline.weight(.semibold))
+                            .font(.system(size: 14, weight: .semibold))
                     }
-                    .foregroundColor(.primary)
+                    .foregroundColor(AppColor.ink)
                     .padding(.horizontal, 12)
                     .padding(.vertical, 8)
-                    .background(.regularMaterial)
-                    .cornerRadius(12)
+                    .background(AppColor.surface)
+                    .clipShape(Capsule())
+                    .overlay(Capsule().strokeBorder(AppColor.divider, lineWidth: 0.5))
                 }
 
                 bpmButton
             }
 
             Spacer()
-
             emotionBadge
-
             Spacer()
 
-            HStack(spacing: 8) {
+            HStack(spacing: 6) {
                 iconButton("arrow.uturn.backward", enabled: canUndo) {
                     canvasView.undoManager?.undo(); updateUndoState()
                 }
@@ -219,20 +212,22 @@ struct CanvasView: View {
                     canvasView.undoManager?.redo(); updateUndoState()
                 }
             }
-            .padding(.horizontal, 10)
-            .padding(.vertical, 8)
-            .background(.regularMaterial)
-            .cornerRadius(12)
+            .padding(.horizontal, 6)
+            .padding(.vertical, 4)
+            .background(AppColor.surface)
+            .clipShape(Capsule())
+            .overlay(Capsule().strokeBorder(AppColor.divider, lineWidth: 0.5))
 
             iconButton("photo.stack") { isShowingGallery = true }
             iconButton("square.and.arrow.down") { saveToGallery() }
+            iconButton("paperplane") { isShowingShare = true }
             iconButton("trash") {
                 canvasView.drawing = PKDrawing()
                 drawingStore.clear()
                 updateUndoState()
             }
         }
-        .padding(.horizontal, 20)
+        .padding(.horizontal, AppSpacing.lg)
         .padding(.top, 10)
         .padding(.bottom, 6)
     }
@@ -241,10 +236,15 @@ struct CanvasView: View {
 
     private var colorPalette: some View {
         VStack(spacing: 0) {
+            // İnce ayraç çizgisi (üstte)
+            Rectangle()
+                .fill(AppColor.divider)
+                .frame(height: 0.5)
+
             // Renkler + Silgi
             ScrollView(.horizontal, showsIndicators: false) {
                 HStack(spacing: 10) {
-                    // Silgi butonu
+                    // Silgi
                     Button {
                         HapticManager.impact(.light)
                         withAnimation(.spring(response: 0.3, dampingFraction: 0.6)) {
@@ -254,26 +254,29 @@ struct CanvasView: View {
                         ZStack {
                             Circle()
                                 .fill(drawingEngine.isEraserActive
-                                      ? Color.primary
-                                      : Color(UIColor.secondarySystemBackground))
+                                      ? AppColor.ink
+                                      : AppColor.surfaceMuted)
                                 .frame(width: 34, height: 34)
                             Image(systemName: "eraser.fill")
-                                .font(.system(size: 14, weight: .semibold))
-                                .foregroundColor(drawingEngine.isEraserActive ? Color(UIColor.systemBackground) : .primary)
+                                .font(.system(size: 13, weight: .semibold))
+                                .foregroundColor(drawingEngine.isEraserActive ? AppColor.canvas : AppColor.ink)
                         }
-                        .shadow(color: drawingEngine.isEraserActive ? Color.primary.opacity(0.3) : .clear, radius: 6)
+                        .shadow(color: drawingEngine.isEraserActive ? AppColor.ink.opacity(0.25) : .clear, radius: 6)
                     }
 
-                    Divider().frame(height: 28)
+                    Rectangle()
+                        .fill(AppColor.divider)
+                        .frame(width: 1, height: 24)
+                        .padding(.horizontal, 4)
 
                     ForEach(drawingEngine.availableColors, id: \.self) { color in
                         let isSelected = drawingEngine.selectedColor == color && !drawingEngine.isEraserActive
                         Circle()
                             .fill(color)
                             .frame(width: isSelected ? 34 : 28, height: isSelected ? 34 : 28)
-                            .overlay(Circle().stroke(Color.primary, lineWidth: isSelected ? 2.5 : 0))
-                            .overlay(Circle().stroke(Color.white, lineWidth: isSelected ? 1.5 : 0).padding(2.5))
-                            .shadow(color: isSelected ? color.opacity(0.6) : .clear, radius: 6)
+                            .overlay(Circle().strokeBorder(AppColor.canvas, lineWidth: isSelected ? 2 : 0))
+                            .overlay(Circle().strokeBorder(color.opacity(0.9), lineWidth: isSelected ? 1 : 0).padding(2))
+                            .shadow(color: isSelected ? color.opacity(0.55) : .clear, radius: 6)
                             .animation(.spring(response: 0.3, dampingFraction: 0.6), value: isSelected)
                             .onTapGesture {
                                 HapticManager.selection()
@@ -283,15 +286,15 @@ struct CanvasView: View {
                             }
                     }
                 }
-                .padding(.horizontal, 16)
+                .padding(.horizontal, AppSpacing.md)
                 .padding(.vertical, 10)
             }
 
-            // Fırça boyutu
-            HStack(spacing: 12) {
-                Image(systemName: "circle.fill")
-                    .font(.system(size: 6))
-                    .foregroundColor(.secondary)
+            // Fırça boyutu — daha minimal
+            HStack(spacing: 10) {
+                Circle()
+                    .fill(AppColor.inkMuted)
+                    .frame(width: 4, height: 4)
                 Slider(
                     value: Binding(
                         get: { drawingEngine.brushSize },
@@ -300,14 +303,16 @@ struct CanvasView: View {
                     in: 1...40,
                     step: 1
                 )
-                .tint(drawingEngine.isEraserActive ? .primary : drawingEngine.selectedColor)
-                Image(systemName: "circle.fill")
-                    .font(.system(size: 14))
-                    .foregroundColor(.secondary)
+                .tint(drawingEngine.isEraserActive ? AppColor.ink : drawingEngine.selectedColor)
+                Circle()
+                    .fill(AppColor.inkMuted)
+                    .frame(width: 12, height: 12)
             }
-            .padding(.horizontal, 20)
-            .padding(.bottom, 8)
+            .padding(.horizontal, AppSpacing.lg)
+            .padding(.bottom, 10)
+            .padding(.top, 2)
         }
+        .background(AppColor.canvas.opacity(0.95))
         .background(.ultraThinMaterial)
     }
 
@@ -317,44 +322,54 @@ struct CanvasView: View {
         Button { isShowingMoodInput.toggle() } label: {
             HStack(spacing: 6) {
                 Image(systemName: biometricService.isMocking ? "hand.point.up" : "heart.fill")
-                    .foregroundColor(biometricService.isMocking ? .orange : .red)
+                    .font(.system(size: 12, weight: .semibold))
+                    .foregroundColor(biometricService.isMocking ? AppColor.accent : Color(red: 0.85, green: 0.30, blue: 0.30))
                     .symbolEffect(.pulse, isActive: !biometricService.isMocking)
-                Text(biometricService.isMocking ? "Manuel" : "\(biometricService.currentBPM) BPM")
-                    .font(.subheadline.weight(.semibold))
+                Text(biometricService.isMocking ? "Manuel" : "\(biometricService.currentBPM)")
+                    .font(.system(size: 13, weight: .semibold))
+                    .foregroundColor(AppColor.ink)
                     .monospacedDigit()
+                if !biometricService.isMocking {
+                    Text("BPM")
+                        .font(.system(size: 10, weight: .medium))
+                        .foregroundColor(AppColor.inkMuted)
+                }
             }
             .padding(.horizontal, 12)
             .padding(.vertical, 8)
-            .background(.regularMaterial)
-            .cornerRadius(12)
+            .background(AppColor.surface)
+            .clipShape(Capsule())
+            .overlay(Capsule().strokeBorder(AppColor.divider, lineWidth: 0.5))
         }
     }
 
     private var emotionBadge: some View {
         HStack(spacing: 6) {
             Text(biometricService.currentEmotion.emoji)
-                .font(.title3)
+                .font(.system(size: 16))
                 .scaleEffect(emotionPulse ? 1.3 : 1.0)
                 .animation(.spring(response: 0.3, dampingFraction: 0.4), value: emotionPulse)
             Text(biometricService.currentEmotion.displayName)
-                .font(.subheadline.weight(.bold))
+                .font(.system(size: 13, weight: .semibold))
                 .foregroundColor(biometricService.currentEmotion.color)
                 .animation(.easeInOut(duration: 0.3), value: biometricService.currentEmotion)
         }
         .padding(.horizontal, 12)
         .padding(.vertical, 8)
-        .background(.regularMaterial)
-        .cornerRadius(12)
+        .background(biometricService.currentEmotion.color.opacity(0.10))
+        .clipShape(Capsule())
+        .overlay(Capsule().strokeBorder(biometricService.currentEmotion.color.opacity(0.25), lineWidth: 0.8))
     }
 
     private func iconButton(_ icon: String, enabled: Bool = true, action: @escaping () -> Void) -> some View {
         Button(action: action) {
             Image(systemName: icon)
-                .font(.system(size: 16, weight: .semibold))
-                .foregroundColor(enabled ? .primary : .secondary.opacity(0.4))
-                .padding(10)
-                .background(.regularMaterial)
+                .font(.system(size: 14, weight: .semibold))
+                .foregroundColor(enabled ? AppColor.ink : AppColor.inkMuted.opacity(0.4))
+                .frame(width: 36, height: 36)
+                .background(AppColor.surface)
                 .clipShape(Circle())
+                .overlay(Circle().strokeBorder(AppColor.divider, lineWidth: 0.5))
         }
         .disabled(!enabled)
     }
@@ -366,7 +381,8 @@ struct CanvasView: View {
             HapticManager.notification(.warning)
             return
         }
-        galleryStore.save(drawing: canvasView.drawing, emotion: biometricService.currentEmotion)
+        let bpmHistory = biometricService.snapshotBpmHistory()
+        galleryStore.save(drawing: canvasView.drawing, emotion: biometricService.currentEmotion, bpmHistory: bpmHistory)
         HapticManager.notification(.success)
         withAnimation(.spring(response: 0.4, dampingFraction: 0.7)) { savedFeedback = true }
         DispatchQueue.main.asyncAfter(deadline: .now() + 2) {

@@ -1,6 +1,5 @@
 import Foundation
 import FirebaseFirestore
-import FirebaseStorage
 import UIKit
 
 class FeedService: ObservableObject {
@@ -11,9 +10,13 @@ class FeedService: ObservableObject {
     @Published var isLoading = false
 
     private let db = Firestore.firestore()
-    private let storage = Storage.storage()
     private var discoverListener: ListenerRegistration?
     private var feedListener: ListenerRegistration?
+
+    // MARK: - Cloudinary Ayarları
+    // Cloudinary dashboard'dan alınan değerleri buraya gir
+    private let cloudinaryCloudName = "dy99f2dhb"
+    private let cloudinaryUploadPreset = "jrgskcq4"
 
     // MARK: - Keşfet
 
@@ -39,10 +42,7 @@ class FeedService: ObservableObject {
 
     func startFeedListener(followingIds: [String], currentUserId: String) {
         feedListener?.remove()
-        guard !followingIds.isEmpty else {
-            feedPosts = []
-            return
-        }
+        guard !followingIds.isEmpty else { feedPosts = []; return }
         let ids = Array(followingIds.prefix(30))
         feedListener = db.collection("posts")
             .whereField("userId", in: ids)
@@ -64,7 +64,7 @@ class FeedService: ObservableObject {
         feedListener?.remove()
     }
 
-    // MARK: - Paylaş
+    // MARK: - Gönderi Paylaş
 
     func sharePost(
         image: UIImage,
@@ -73,13 +73,15 @@ class FeedService: ObservableObject {
         user: SocialUser,
         completion: @escaping (Error?) -> Void
     ) {
-        isLoading = true
-        uploadImage(image) { [weak self] result in
+        DispatchQueue.main.async { self.isLoading = true }
+
+        uploadToCloudinary(image) { [weak self] result in
             guard let self else { return }
             switch result {
             case .failure(let error):
                 DispatchQueue.main.async { self.isLoading = false }
                 completion(error)
+
             case .success(let url):
                 let ref = self.db.collection("posts").document()
                 let post = Post(
@@ -107,22 +109,50 @@ class FeedService: ObservableObject {
         }
     }
 
-    // MARK: - Görsel Yükleme
+    // MARK: - Cloudinary Yükleme
 
-    private func uploadImage(_ image: UIImage, completion: @escaping (Result<String, Error>) -> Void) {
-        guard let data = image.jpegData(compressionQuality: 0.75) else {
+    private func uploadToCloudinary(_ image: UIImage, completion: @escaping (Result<String, Error>) -> Void) {
+        guard let imageData = image.jpegData(compressionQuality: 0.75) else {
             completion(.failure(NSError(domain: "VibeFeed", code: -1,
-                                        userInfo: [NSLocalizedDescriptionKey: "Görsel dönüştürülemedi"])))
+                userInfo: [NSLocalizedDescriptionKey: "Görsel dönüştürülemedi"])))
             return
         }
-        let ref = storage.reference().child("posts/\(UUID().uuidString).jpg")
-        ref.putData(data) { _, error in
-            if let error { completion(.failure(error)); return }
-            ref.downloadURL { url, error in
-                if let error { completion(.failure(error)); return }
-                completion(.success(url?.absoluteString ?? ""))
+
+        let url = URL(string: "https://api.cloudinary.com/v1_1/\(cloudinaryCloudName)/image/upload")!
+        var request = URLRequest(url: url)
+        request.httpMethod = "POST"
+
+        let boundary = UUID().uuidString
+        request.setValue("multipart/form-data; boundary=\(boundary)", forHTTPHeaderField: "Content-Type")
+
+        var body = Data()
+        // upload_preset
+        body.append("--\(boundary)\r\n".data(using: .utf8)!)
+        body.append("Content-Disposition: form-data; name=\"upload_preset\"\r\n\r\n".data(using: .utf8)!)
+        body.append("\(cloudinaryUploadPreset)\r\n".data(using: .utf8)!)
+        // file
+        body.append("--\(boundary)\r\n".data(using: .utf8)!)
+        body.append("Content-Disposition: form-data; name=\"file\"; filename=\"drawing.jpg\"\r\n".data(using: .utf8)!)
+        body.append("Content-Type: image/jpeg\r\n\r\n".data(using: .utf8)!)
+        body.append(imageData)
+        body.append("\r\n--\(boundary)--\r\n".data(using: .utf8)!)
+        request.httpBody = body
+
+        URLSession.shared.dataTask(with: request) { data, _, error in
+            if let error {
+                completion(.failure(error))
+                return
             }
-        }
+            guard let data,
+                  let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+                  let secureUrl = json["secure_url"] as? String
+            else {
+                completion(.failure(NSError(domain: "VibeFeed", code: -2,
+                    userInfo: [NSLocalizedDescriptionKey: "Cloudinary yanıtı okunamadı"])))
+                return
+            }
+            completion(.success(secureUrl))
+        }.resume()
     }
 
     // MARK: - Beğeni Zenginleştirme
@@ -139,15 +169,11 @@ class FeedService: ObservableObject {
             let likeId = "\(userId)_\(enriched[i].id)"
             group.enter()
             db.collection("likes").document(likeId).getDocument { snapshot, _ in
-                if snapshot?.exists == true {
-                    enriched[i].isLiked = true
-                }
+                if snapshot?.exists == true { enriched[i].isLiked = true }
                 group.leave()
             }
         }
 
-        group.notify(queue: .main) {
-            completion(enriched)
-        }
+        group.notify(queue: .main) { completion(enriched) }
     }
 }

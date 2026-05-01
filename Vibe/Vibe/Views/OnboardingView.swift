@@ -6,99 +6,136 @@ struct OnboardingView: View {
 
     private let pages: [OnboardingPage] = [
         OnboardingPage(
-            emoji: "🎨",
+            icon: nil,
+            assetImage: "Logo",
             title: "Vibe'a Hoş Geldin",
             description: "Duygularının seni yönlendirdiği bir çizim deneyimi. Her çizgi, o anki hissinin bir yansıması.",
-            color: .blue
+            color: AppColor.accent
         ),
         OnboardingPage(
-            emoji: "💓",
+            icon: "heart.fill", assetImage: nil,
             title: "Duygunu Ölç",
-            description: "Apple Watch veya iPhone üzerinden kalp atış hızını okuyarak duygunu otomatik algılar. İstersen psikolojik test veya manuel ayarı da kullanabilirsin.",
-            color: .red
+            description: "Apple Watch veya iPhone üzerinden kalp atışını okuyarak duygunu otomatik algılar. İstersen bilimsel test veya manuel ayarı kullanabilirsin.",
+            color: Color(red: 0.85, green: 0.40, blue: 0.40)
         ),
         OnboardingPage(
-            emoji: "🖌️",
+            icon: "paintbrush.fill", assetImage: nil,
             title: "Duyguya Göre Çiz",
-            description: "Sakinsen yumuşak marker ve pastel renkler. Enerjiksen dinamik kalem ve canlı tonlar. Stresli hissediyorsan keskin çizgiler ve koyu palet.",
-            color: .orange
+            description: "Sakinsen yumuşak marker, enerjiksen canlı kalem, stresli hissediyorsan keskin çizgiler ve koyu palet.",
+            color: Color(red: 0.95, green: 0.65, blue: 0.30)
         ),
         OnboardingPage(
-            emoji: "🖼️",
-            title: "Anılarını Kaydet",
-            description: "Her çizim, o anki duygu durumuyla birlikte galerine kaydedilir. Sakin anlarında mı, yoksa stresli anlarında mı daha güzel çiziyorsun?",
-            color: .purple
+            icon: "photo.stack.fill", assetImage: nil,
+            title: "Anılarını Sakla",
+            description: "Her çizim duygu durumuyla galerine kaydedilir. Geçmiş çizimlerini incele, BPM grafiklerini gör.",
+            color: Color(red: 0.55, green: 0.45, blue: 0.85)
         ),
     ]
 
     var body: some View {
-        ZStack(alignment: .bottom) {
-            TabView(selection: $currentPage) {
-                ForEach(0..<pages.count, id: \.self) { i in
-                    pageView(pages[i]).tag(i)
-                }
-            }
-            .tabViewStyle(.page(indexDisplayMode: .never))
-            .animation(.easeInOut, value: currentPage)
+        ZStack {
+            // Sıcak arka plan
+            AppColor.canvas.ignoresSafeArea()
 
-            VStack(spacing: 20) {
-                // Nokta göstergesi
-                HStack(spacing: 8) {
-                    ForEach(0..<pages.count, id: \.self) { i in
-                        Capsule()
-                            .fill(i == currentPage ? pages[currentPage].color : Color.secondary.opacity(0.3))
-                            .frame(width: i == currentPage ? 20 : 8, height: 8)
-                            .animation(.spring(response: 0.3, dampingFraction: 0.7), value: currentPage)
-                    }
-                }
-
-                // Buton
-                Button {
-                    HapticManager.impact(.medium)
+            VStack(spacing: 0) {
+                // Atla butonu
+                HStack {
+                    Spacer()
                     if currentPage < pages.count - 1 {
-                        withAnimation { currentPage += 1 }
-                    } else {
-                        onFinish()
+                        Button {
+                            HapticManager.impact(.light)
+                            onFinish()
+                        } label: {
+                            Text("Atla")
+                                .font(.system(size: 14, weight: .medium))
+                                .foregroundColor(AppColor.inkMuted)
+                        }
                     }
-                } label: {
-                    Text(currentPage == pages.count - 1 ? "Başla" : "Devam")
-                        .font(.headline)
-                        .foregroundColor(.white)
-                        .frame(maxWidth: .infinity)
-                        .padding()
-                        .background(pages[currentPage].color)
-                        .cornerRadius(14)
-                        .animation(.easeInOut(duration: 0.3), value: currentPage)
                 }
-                .padding(.horizontal, 32)
+                .frame(height: 30)
+                .padding(.horizontal, AppSpacing.lg)
+                .padding(.top, AppSpacing.md)
+
+                // Sayfalar
+                TabView(selection: $currentPage) {
+                    ForEach(0..<pages.count, id: \.self) { i in
+                        pageView(pages[i]).tag(i)
+                    }
+                }
+                .tabViewStyle(.page(indexDisplayMode: .never))
+                .animation(.easeInOut, value: currentPage)
+
+                // Alt kısım
+                VStack(spacing: AppSpacing.lg) {
+                    // Nokta göstergesi
+                    HStack(spacing: 6) {
+                        ForEach(0..<pages.count, id: \.self) { i in
+                            Capsule()
+                                .fill(i == currentPage
+                                      ? pages[currentPage].color
+                                      : AppColor.divider)
+                                .frame(width: i == currentPage ? 22 : 6, height: 6)
+                                .animation(.spring(response: 0.4, dampingFraction: 0.7), value: currentPage)
+                        }
+                    }
+
+                    PrimaryButton(
+                        title: currentPage == pages.count - 1 ? "Başla" : "Devam",
+                        icon: currentPage == pages.count - 1 ? "sparkles" : "arrow.right",
+                        color: pages[currentPage].color
+                    ) {
+                        if currentPage < pages.count - 1 {
+                            withAnimation { currentPage += 1 }
+                        } else {
+                            onFinish()
+                        }
+                    }
+                    .padding(.horizontal, AppSpacing.lg)
+                    .animation(.easeInOut(duration: 0.3), value: currentPage)
+                }
+                .padding(.bottom, AppSpacing.xl)
             }
-            .padding(.bottom, 48)
         }
-        .ignoresSafeArea()
     }
 
     private func pageView(_ page: OnboardingPage) -> some View {
-        VStack(spacing: 28) {
+        VStack(spacing: AppSpacing.xl) {
             Spacer()
 
-            ZStack {
-                Circle()
-                    .fill(page.color.opacity(0.12))
-                    .frame(width: 160, height: 160)
-                Text(page.emoji)
-                    .font(.system(size: 72))
+            // Logo veya ikon
+            if let asset = page.assetImage {
+                Image(asset)
+                    .resizable()
+                    .scaledToFit()
+                    .frame(width: 220, height: 200)
+                    .shadow(color: page.color.opacity(0.25), radius: 24, y: 8)
+            } else if let icon = page.icon {
+                ZStack {
+                    Circle()
+                        .fill(page.color.opacity(0.10))
+                        .frame(width: 180, height: 180)
+                    Circle()
+                        .strokeBorder(page.color.opacity(0.20), lineWidth: 1)
+                        .frame(width: 180, height: 180)
+                    Image(systemName: icon)
+                        .font(.system(size: 64, weight: .light))
+                        .foregroundColor(page.color)
+                }
+                .shadow(color: page.color.opacity(0.20), radius: 24, y: 8)
             }
 
-            VStack(spacing: 14) {
+            VStack(spacing: AppSpacing.md) {
                 Text(page.title)
-                    .font(.largeTitle.weight(.bold))
+                    .font(.system(size: 30, weight: .bold))
+                    .foregroundColor(AppColor.ink)
                     .multilineTextAlignment(.center)
 
                 Text(page.description)
-                    .font(.body)
-                    .foregroundColor(.secondary)
+                    .font(.system(size: 15))
+                    .foregroundColor(AppColor.inkMuted)
                     .multilineTextAlignment(.center)
-                    .padding(.horizontal, 32)
+                    .lineSpacing(4)
+                    .padding(.horizontal, AppSpacing.xl)
             }
 
             Spacer()
@@ -108,7 +145,8 @@ struct OnboardingView: View {
 }
 
 private struct OnboardingPage {
-    let emoji: String
+    let icon: String?
+    let assetImage: String?
     let title: String
     let description: String
     let color: Color

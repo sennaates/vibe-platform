@@ -6,43 +6,95 @@ struct GalleryView: View {
     @Environment(\.horizontalSizeClass) private var sizeClass
     @ObservedObject var galleryStore: GalleryStore
 
+    @State private var isShowingStats = false
+    @State private var selectedRecord: DrawingRecord?
+
     private var columns: [GridItem] {
         let count = sizeClass == .regular ? 3 : 2
-        return Array(repeating: GridItem(.flexible(), spacing: 14), count: count)
+        return Array(repeating: GridItem(.flexible(), spacing: 12), count: count)
     }
 
     var body: some View {
         NavigationStack {
             Group {
                 if galleryStore.records.isEmpty {
-                    ContentUnavailableView(
-                        "Henüz çizim yok",
-                        systemImage: "scribble.variable",
-                        description: Text("Kanvas ekranındaki ↓ butonuyla çizimlerini galeriye kaydet.")
-                    )
+                    emptyView
                 } else {
-                    ScrollView {
-                        LazyVGrid(columns: columns, spacing: 14) {
-                            ForEach(galleryStore.records) { record in
-                                GalleryCard(record: record) {
-                                    galleryStore.delete(record: record)
-                                }
-                            }
-                        }
-                        .padding()
-                    }
+                    grid
                 }
             }
+            .background(AppColor.canvas.ignoresSafeArea())
             .navigationTitle("Galeri")
             .navigationBarTitleDisplayMode(.large)
             .toolbar {
+                ToolbarItem(placement: .topBarLeading) {
+                    Button {
+                        HapticManager.impact(.light)
+                        isShowingStats = true
+                    } label: {
+                        Image(systemName: "chart.bar.fill")
+                            .foregroundColor(AppColor.accent)
+                    }
+                }
                 ToolbarItem(placement: .topBarTrailing) {
                     Button("Kapat") { dismiss() }
+                        .foregroundColor(AppColor.inkMuted)
                 }
+            }
+            .sheet(isPresented: $isShowingStats) {
+                StatsView(galleryStore: galleryStore)
+            }
+            .sheet(item: $selectedRecord) { record in
+                DrawingDetailView(record: record)
             }
         }
     }
+
+    // MARK: - Boş
+
+    private var emptyView: some View {
+        VStack {
+            Spacer()
+            EmptyStateView(
+                icon: "scribble.variable",
+                title: "Henüz çizim yok",
+                message: "Kanvas ekranındaki ↓ butonuyla çizimlerini galeriye kaydedebilirsin."
+            )
+            Spacer()
+        }
+    }
+
+    // MARK: - Grid
+
+    private var grid: some View {
+        ScrollView {
+            // Üst sayaç
+            HStack {
+                Text("\(galleryStore.records.count) çizim")
+                    .font(.system(size: 13, weight: .medium))
+                    .foregroundColor(AppColor.inkMuted)
+                Spacer()
+            }
+            .padding(.horizontal, AppSpacing.md)
+            .padding(.top, 4)
+
+            LazyVGrid(columns: columns, spacing: 12) {
+                ForEach(galleryStore.records) { record in
+                    GalleryCard(record: record) {
+                        galleryStore.delete(record: record)
+                    }
+                    .onTapGesture {
+                        HapticManager.impact(.light)
+                        selectedRecord = record
+                    }
+                }
+            }
+            .padding(AppSpacing.md)
+        }
+    }
 }
+
+// MARK: - Galeri Kartı
 
 private struct GalleryCard: View {
     let record: DrawingRecord
@@ -55,8 +107,8 @@ private struct GalleryCard: View {
         VStack(alignment: .leading, spacing: 0) {
             // Önizleme
             ZStack {
-                RoundedRectangle(cornerRadius: 12)
-                    .fill(record.emotion.color.opacity(0.08))
+                RoundedRectangle(cornerRadius: AppRadius.md, style: .continuous)
+                    .fill(record.emotion.color.opacity(0.06))
 
                 if let thumbnail = record.thumbnail() {
                     Image(uiImage: thumbnail)
@@ -65,30 +117,31 @@ private struct GalleryCard: View {
                         .padding(8)
                 } else {
                     Image(systemName: "scribble")
-                        .font(.largeTitle)
-                        .foregroundColor(.secondary)
+                        .font(.title)
+                        .foregroundColor(AppColor.inkMuted)
                 }
             }
             .frame(height: 140)
-            .clipShape(RoundedRectangle(cornerRadius: 12))
+            .clipShape(RoundedRectangle(cornerRadius: AppRadius.md, style: .continuous))
+            .overlay(
+                RoundedRectangle(cornerRadius: AppRadius.md, style: .continuous)
+                    .strokeBorder(record.emotion.color.opacity(0.15), lineWidth: 1)
+            )
 
-            // Bilgi satırı
-            HStack(spacing: 6) {
-                Text(record.emotion.emoji)
-                    .font(.caption)
+            // Bilgi
+            HStack(spacing: 5) {
+                Text(record.emotion.emoji).font(.system(size: 12))
                 Text(record.emotion.displayName)
-                    .font(.caption.weight(.semibold))
+                    .font(.system(size: 11, weight: .semibold))
                     .foregroundColor(record.emotion.color)
                 Spacer()
                 Text(record.date, style: .date)
-                    .font(.caption2)
-                    .foregroundColor(.secondary)
+                    .font(.system(size: 10))
+                    .foregroundColor(AppColor.inkMuted)
             }
-            .padding(.horizontal, 6)
-            .padding(.vertical, 6)
+            .padding(.horizontal, 4)
+            .padding(.top, 8)
         }
-        .background(Color(UIColor.secondarySystemBackground))
-        .clipShape(RoundedRectangle(cornerRadius: 14))
         .contextMenu {
             Button {
                 if let img = record.thumbnail(size: CGSize(width: 1200, height: 900)) {
@@ -98,10 +151,7 @@ private struct GalleryCard: View {
             } label: {
                 Label("Paylaş", systemImage: "square.and.arrow.up")
             }
-
-            Button(role: .destructive) {
-                onDelete()
-            } label: {
+            Button(role: .destructive, action: onDelete) {
                 Label("Sil", systemImage: "trash")
             }
         }
@@ -113,12 +163,12 @@ private struct GalleryCard: View {
     }
 }
 
+// MARK: - Share Sheet
+
 struct ShareSheet: UIViewControllerRepresentable {
     let items: [Any]
-
     func makeUIViewController(context: Context) -> UIActivityViewController {
         UIActivityViewController(activityItems: items, applicationActivities: nil)
     }
-
     func updateUIViewController(_ uiViewController: UIActivityViewController, context: Context) {}
 }
