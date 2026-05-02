@@ -13,7 +13,7 @@ struct VibeApp: App {
     @StateObject private var authService = AuthService.shared
 
     init() {
-        FirebaseApp.configure()
+        FirebaseConfig.configure()
     }
 
     var body: some Scene {

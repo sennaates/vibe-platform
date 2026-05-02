@@ -24,7 +24,7 @@ DerivedData/
 
 # Node
 node_modules/
-.env
+**/.env
 
 # Firebase/Google Services
 **/GoogleService-Info.plist
