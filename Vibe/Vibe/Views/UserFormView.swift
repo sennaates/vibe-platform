@@ -14,6 +14,7 @@ struct UserFormView: View {
     @State private var name: String = ""
     @State private var selectedEmoji: String = "😊"
     @State private var selectedColor: ProfileColor = .blue
+    @State private var selectedBgType: CanvasBgType = .blank
 
     private let emojiOptions = [
         "😊","😎","🎨","🖌️","✏️","🌟","🔥","🌊","🌸","🍀",
@@ -29,6 +30,7 @@ struct UserFormView: View {
             _name = State(initialValue: user.name)
             _selectedEmoji = State(initialValue: user.avatarEmoji)
             _selectedColor = State(initialValue: user.profileColor)
+            _selectedBgType = State(initialValue: user.canvasBgType ?? .blank)
         }
     }
 
@@ -57,6 +59,13 @@ struct UserFormView: View {
                     VStack(alignment: .leading, spacing: AppSpacing.sm) {
                         FieldLabel(title: "RENK")
                         colorPicker
+                    }
+                    .padding(.horizontal, AppSpacing.lg)
+
+                    // Tuval Tipi
+                    VStack(alignment: .leading, spacing: AppSpacing.sm) {
+                        FieldLabel(title: "SAYFA TİPİ")
+                        bgTypePicker
                     }
                     .padding(.horizontal, AppSpacing.lg)
 
@@ -166,6 +175,20 @@ struct UserFormView: View {
         }
     }
 
+    // MARK: - Sayfa Tipi Seçici
+
+    private var bgTypePicker: some View {
+        AppCard(padding: 4) {
+            Picker("Sayfa Tipi", selection: $selectedBgType) {
+                ForEach(CanvasBgType.allCases, id: \.self) { type in
+                    Text(type.rawValue).tag(type)
+                }
+            }
+            .pickerStyle(.segmented)
+            .padding(4)
+        }
+    }
+
     // MARK: - Emoji Seçici
 
     private var emojiPicker: some View {
@@ -208,13 +231,15 @@ struct UserFormView: View {
                 id: existing.id,
                 name: name.trimmingCharacters(in: .whitespaces),
                 avatarEmoji: selectedEmoji,
-                profileColor: selectedColor
+                profileColor: selectedColor,
+                canvasBgType: selectedBgType
             )
         } else {
             profile = UserProfile(
                 name: name.trimmingCharacters(in: .whitespaces),
                 avatarEmoji: selectedEmoji,
-                profileColor: selectedColor
+                profileColor: selectedColor,
+                canvasBgType: selectedBgType
             )
         }
         HapticManager.notification(.success)
