@@ -3,11 +3,12 @@
 import { use, useEffect, useRef, useState } from "react"
 import Image from "next/image"
 import Link from "next/link"
+import { useRouter } from "next/navigation"
 import {
   doc, getDoc, collection, query, orderBy,
-  onSnapshot, addDoc, serverTimestamp, updateDoc, increment
+  onSnapshot, addDoc, serverTimestamp, updateDoc, increment, deleteDoc
 } from "firebase/firestore"
-import { ArrowLeft, Send, Heart } from "lucide-react"
+import { ArrowLeft, Send, Heart, Trash2, MoreHorizontal } from "lucide-react"
 import { db } from "@/lib/firebase"
 import { useAuth } from "@/hooks/useAuth"
 import { Avatar } from "@/components/ui/Avatar"
@@ -18,12 +19,15 @@ import type { Post, Comment } from "@/types"
 export default function PostDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params)
   const { user, profile } = useAuth()
+  const router = useRouter()
 
-  const [post, setPost]         = useState<Post | null>(null)
-  const [comments, setComments] = useState<Comment[]>([])
-  const [text, setText]         = useState("")
-  const [sending, setSending]   = useState(false)
-  const bottomRef               = useRef<HTMLDivElement>(null)
+  const [post, setPost]           = useState<Post | null>(null)
+  const [comments, setComments]   = useState<Comment[]>([])
+  const [text, setText]           = useState("")
+  const [sending, setSending]     = useState(false)
+  const [deleting, setDeleting]   = useState(false)
+  const [showMenu, setShowMenu]   = useState(false)
+  const bottomRef                 = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
     getDoc(doc(db, "posts", id)).then(snap => {
@@ -37,6 +41,16 @@ export default function PostDetailPage({ params }: { params: Promise<{ id: strin
       setComments(snap.docs.map(d => ({ id: d.id, ...d.data() } as Comment)))
     })
   }, [id])
+
+  const isOwnPost = user?.uid === post?.userId
+
+  async function handleDelete() {
+    if (!post || !user || !isOwnPost) return
+    setDeleting(true)
+    await deleteDoc(doc(db, "posts", id))
+    await updateDoc(doc(db, "users", post.userId), { postsCount: increment(-1) })
+    router.push(`/profile/${user.uid}`)
+  }
 
   async function sendComment() {
     if (!text.trim() || !user || !profile || sending) return
@@ -104,6 +118,31 @@ export default function PostDetailPage({ params }: { params: Promise<{ id: strin
                   <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold bg-[#F5F3EF] text-[#78716C]">
                     <Heart size={10} className="fill-[#C45F8A] text-[#C45F8A]" /> {post.bpm}
                   </span>
+                )}
+                {isOwnPost && (
+                  <div className="relative">
+                    <button
+                      onClick={() => setShowMenu(m => !m)}
+                      className="p-1.5 rounded-[8px] text-[#A8A29E] hover:bg-[#F5F3EF] hover:text-[#78716C] transition-colors"
+                    >
+                      <MoreHorizontal size={16} />
+                    </button>
+                    {showMenu && (
+                      <>
+                        <div className="fixed inset-0 z-10" onClick={() => setShowMenu(false)} />
+                        <div className="absolute right-0 top-8 z-20 bg-white border border-[#E8E4DC] rounded-[14px] shadow-lg py-1 min-w-[140px]">
+                          <button
+                            onClick={() => { setShowMenu(false); handleDelete() }}
+                            disabled={deleting}
+                            className="w-full flex items-center gap-2.5 px-4 py-2.5 text-sm font-medium text-red-500 hover:bg-red-50 transition-colors"
+                          >
+                            <Trash2 size={14} />
+                            {deleting ? "Siliniyor…" : "Çizimi Sil"}
+                          </button>
+                        </div>
+                      </>
+                    )}
+                  </div>
                 )}
               </div>
             </div>

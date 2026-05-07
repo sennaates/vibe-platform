@@ -3,10 +3,13 @@
 import { use, useEffect, useState } from "react"
 import Image from "next/image"
 import Link from "next/link"
-import { doc, getDoc, collection, query, where, orderBy, getDocs } from "firebase/firestore"
+import {
+  doc, getDoc, collection, query, where, orderBy, getDocs,
+  setDoc, deleteDoc, updateDoc, increment, serverTimestamp
+} from "firebase/firestore"
 import { signOut } from "firebase/auth"
 import { useRouter } from "next/navigation"
-import { ArrowLeft, LogOut } from "lucide-react"
+import { ArrowLeft, LogOut, UserPlus, UserCheck, Loader2 } from "lucide-react"
 import { auth, db } from "@/lib/firebase"
 import { useAuth } from "@/hooks/useAuth"
 import { profileColors } from "@/lib/design"
@@ -17,9 +20,12 @@ export default function ProfilePage({ params }: { params: Promise<{ uid: string 
   const { user } = useAuth()
   const router = useRouter()
 
-  const [profile, setProfile] = useState<SocialUser | null>(null)
-  const [posts, setPosts]     = useState<Post[]>([])
-  const [loading, setLoading] = useState(true)
+  const [profile, setProfile]           = useState<SocialUser | null>(null)
+  const [posts, setPosts]               = useState<Post[]>([])
+  const [loading, setLoading]           = useState(true)
+  const [following, setFollowing]       = useState(false)
+  const [followLoading, setFollowLoading] = useState(false)
+  const [localFollowers, setLocalFollowers] = useState(0)
 
   const isOwn  = user?.uid === uid
   const accent = profileColors[profile?.profileColor ?? "blue"] ?? "#4A7FA5"
@@ -28,7 +34,9 @@ export default function ProfilePage({ params }: { params: Promise<{ uid: string 
     async function load() {
       const snap = await getDoc(doc(db, "users", uid))
       if (!snap.exists()) { setLoading(false); return }
-      setProfile(snap.data() as SocialUser)
+      const data = snap.data() as SocialUser
+      setProfile(data)
+      setLocalFollowers(data.followersCount)
       const q = query(collection(db, "posts"), where("userId", "==", uid), orderBy("createdAt", "desc"))
       const postSnap = await getDocs(q)
       setPosts(postSnap.docs.map(d => ({ id: d.id, ...d.data() } as Post)))
@@ -36,6 +44,31 @@ export default function ProfilePage({ params }: { params: Promise<{ uid: string 
     }
     load()
   }, [uid])
+
+  useEffect(() => {
+    if (!user || isOwn) return
+    getDoc(doc(db, "follows", `${user.uid}_${uid}`)).then(snap => setFollowing(snap.exists()))
+  }, [user, uid, isOwn])
+
+  async function handleFollow() {
+    if (!user) { router.push("/auth"); return }
+    setFollowLoading(true)
+    const followRef = doc(db, "follows", `${user.uid}_${uid}`)
+    if (following) {
+      await deleteDoc(followRef)
+      await updateDoc(doc(db, "users", uid), { followersCount: increment(-1) })
+      await updateDoc(doc(db, "users", user.uid), { followingCount: increment(-1) })
+      setFollowing(false)
+      setLocalFollowers(c => c - 1)
+    } else {
+      await setDoc(followRef, { followerId: user.uid, followedId: uid, createdAt: serverTimestamp() })
+      await updateDoc(doc(db, "users", uid), { followersCount: increment(1) })
+      await updateDoc(doc(db, "users", user.uid), { followingCount: increment(1) })
+      setFollowing(true)
+      setLocalFollowers(c => c + 1)
+    }
+    setFollowLoading(false)
+  }
 
   async function handleLogout() {
     await signOut(auth)
@@ -107,18 +140,37 @@ export default function ProfilePage({ params }: { params: Promise<{ uid: string 
           >
             {profile.avatarEmoji}
           </div>
-          {isOwn && (
-            <div className="flex gap-2 mb-1">
-              <Link href="/profile/edit"
-                className="px-4 py-2 bg-white border border-[#E8E4DC] text-[#1C1917] rounded-[14px] text-sm font-semibold shadow-sm hover:bg-[#F5F3EF] transition-colors">
-                Düzenle
-              </Link>
-              <Link href="/canvas"
-                className="px-4 py-2 bg-[#D9723F] text-white rounded-[14px] text-sm font-semibold shadow-sm hover:bg-[#C4622F] transition-colors">
-                + Çizim
-              </Link>
-            </div>
-          )}
+          <div className="flex gap-2 mb-1">
+            {isOwn ? (
+              <>
+                <Link href="/profile/edit"
+                  className="px-4 py-2 bg-white border border-[#E8E4DC] text-[#1C1917] rounded-[14px] text-sm font-semibold shadow-sm hover:bg-[#F5F3EF] transition-colors">
+                  Düzenle
+                </Link>
+                <Link href="/canvas"
+                  className="px-4 py-2 bg-[#D9723F] text-white rounded-[14px] text-sm font-semibold shadow-sm hover:bg-[#C4622F] transition-colors">
+                  + Çizim
+                </Link>
+              </>
+            ) : (
+              <button
+                onClick={handleFollow}
+                disabled={followLoading}
+                className="flex items-center gap-1.5 px-5 py-2 rounded-[14px] text-sm font-semibold shadow-sm transition-all active:scale-95 disabled:opacity-60"
+                style={following
+                  ? { backgroundColor: "#F5F3EF", color: "#78716C", border: "1px solid #E8E4DC" }
+                  : { backgroundColor: accent, color: "#fff" }
+                }
+              >
+                {followLoading
+                  ? <Loader2 size={14} className="animate-spin" />
+                  : following
+                    ? <><UserCheck size={14} />Takip Ediliyor</>
+                    : <><UserPlus size={14} />Takip Et</>
+                }
+              </button>
+            )}
+          </div>
         </div>
 
         <h1 className="font-bold text-[#1C1917] text-2xl sm:text-3xl">{profile.displayName}</h1>
@@ -127,7 +179,7 @@ export default function ProfilePage({ params }: { params: Promise<{ uid: string 
         {/* Stats */}
         <div className="flex gap-6 sm:gap-8 mt-5 pb-6 border-b border-[#E8E4DC]">
           <StatPill value={profile.postsCount} label="çizim" />
-          <StatPill value={profile.followersCount} label="takipçi" />
+          <StatPill value={localFollowers} label="takipçi" />
           <StatPill value={profile.followingCount} label="takip" />
         </div>
 
