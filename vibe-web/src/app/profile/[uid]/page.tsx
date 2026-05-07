@@ -108,12 +108,16 @@ export default function ProfilePage({ params }: { params: Promise<{ uid: string 
             {profile.avatarEmoji}
           </div>
           {isOwn && (
-            <Link
-              href="/canvas"
-              className="px-4 py-2 bg-[#D9723F] text-white rounded-[14px] text-sm font-semibold shadow-sm hover:bg-[#C4622F] transition-colors mb-1"
-            >
-              + Yeni Çizim
-            </Link>
+            <div className="flex gap-2 mb-1">
+              <Link href="/profile/edit"
+                className="px-4 py-2 bg-white border border-[#E8E4DC] text-[#1C1917] rounded-[14px] text-sm font-semibold shadow-sm hover:bg-[#F5F3EF] transition-colors">
+                Düzenle
+              </Link>
+              <Link href="/canvas"
+                className="px-4 py-2 bg-[#D9723F] text-white rounded-[14px] text-sm font-semibold shadow-sm hover:bg-[#C4622F] transition-colors">
+                + Çizim
+              </Link>
+            </div>
           )}
         </div>
 

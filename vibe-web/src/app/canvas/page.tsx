@@ -7,7 +7,7 @@ import {
 } from "firebase/firestore"
 import { db } from "@/lib/firebase"
 import { useAuth } from "@/hooks/useAuth"
-import { EmotionPicker } from "@/components/canvas/EmotionPicker"
+import { EmotionPicker, type BgType } from "@/components/canvas/EmotionPicker"
 import { DrawingCanvas } from "@/components/canvas/DrawingCanvas"
 import type { EmotionState } from "@/lib/drawingEngine"
 
@@ -16,6 +16,7 @@ export default function CanvasPage() {
   const router = useRouter()
   const [emotion, setEmotion] = useState<EmotionState | null>(null)
   const [bpm, setBpm]         = useState(72)
+  const [bg, setBg]           = useState<BgType>("blank")
 
   if (!user || !profile) {
     return (
@@ -77,13 +78,14 @@ export default function CanvasPage() {
   }
 
   if (!emotion) {
-    return <EmotionPicker onSelect={(e, b) => { setEmotion(e); setBpm(b) }} />
+    return <EmotionPicker onSelect={(e, b, bgType) => { setEmotion(e); setBpm(b); setBg(bgType) }} />
   }
 
   return (
     <DrawingCanvas
       emotion={emotion}
       bpm={bpm}
+      bg={bg}
       onSave={handleSave}
       onDiscard={() => setEmotion(null)}
     />
