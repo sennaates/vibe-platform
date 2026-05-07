@@ -3,7 +3,10 @@
 import Link from "next/link"
 import Image from "next/image"
 import { usePathname } from "next/navigation"
-import { Home, ImageIcon, BarChart2, PenLine, LogIn } from "lucide-react"
+import { Home, ImageIcon, BarChart2, PenLine, Search, Bell } from "lucide-react"
+import { useEffect, useState } from "react"
+import { collection, query, where, onSnapshot } from "firebase/firestore"
+import { db } from "@/lib/firebase"
 import { useAuth } from "@/hooks/useAuth"
 import { Avatar } from "@/components/ui/Avatar"
 import { cn } from "@/lib/utils"
@@ -11,6 +14,18 @@ import { cn } from "@/lib/utils"
 export function Navbar() {
   const { user, profile } = useAuth()
   const pathname = usePathname()
+  const [unread, setUnread] = useState(0)
+
+  // Subscribe to unread notification count
+  useEffect(() => {
+    if (!user) { setUnread(0); return }
+    const q = query(
+      collection(db, "notifications", user.uid, "items"),
+      where("read", "==", false)
+    )
+    const unsub = onSnapshot(q, snap => setUnread(snap.size))
+    return unsub
+  }, [user])
 
   return (
     <header className="sticky top-0 z-50 bg-[#FAF8F4]/90 backdrop-blur-md border-b border-[#E8E4DC]">
@@ -47,7 +62,7 @@ export function Navbar() {
           )}
         </nav>
 
-        {/* Right — profile or login */}
+        {/* Right side */}
         <div className="flex items-center gap-1">
           {/* Mobile nav icons */}
           <nav className="flex lg:hidden items-center gap-0.5">
@@ -69,6 +84,26 @@ export function Navbar() {
             )}
           </nav>
 
+          {/* Search */}
+          <NavIconLink href="/search" active={pathname === "/search"}>
+            <Search size={18} strokeWidth={pathname === "/search" ? 2.5 : 1.75} />
+          </NavIconLink>
+
+          {/* Notifications bell */}
+          {user && (
+            <div className="relative">
+              <NavIconLink href="/notifications" active={pathname === "/notifications"}>
+                <Bell size={18} strokeWidth={pathname === "/notifications" ? 2.5 : 1.75} />
+              </NavIconLink>
+              {unread > 0 && (
+                <span className="absolute top-0.5 right-0.5 min-w-[16px] h-4 px-0.5 bg-[#D9723F] text-white text-[9px] font-bold rounded-full flex items-center justify-center pointer-events-none">
+                  {unread > 9 ? "9+" : unread}
+                </span>
+              )}
+            </div>
+          )}
+
+          {/* Profile avatar or login */}
           {user && profile ? (
             <Link
               href={`/profile/${user.uid}`}

@@ -10,6 +10,7 @@ import { useAuth } from "@/hooks/useAuth"
 import { Avatar } from "@/components/ui/Avatar"
 import { profileColors } from "@/lib/design"
 import { formatRelativeTime } from "@/lib/utils"
+import { createNotification } from "@/lib/notifications"
 import type { Post } from "@/types"
 
 interface PostCardProps {
@@ -19,7 +20,7 @@ interface PostCardProps {
 }
 
 export function PostCard({ post, isLiked: initialLiked = false, onDeleted }: PostCardProps) {
-  const { user } = useAuth()
+  const { user, profile } = useAuth()
   const [liked, setLiked]     = useState(initialLiked)
   const [likes, setLikes]     = useState(post.likesCount)
   const [showMenu, setShowMenu] = useState(false)
@@ -58,6 +59,18 @@ export function PostCard({ post, isLiked: initialLiked = false, onDeleted }: Pos
       await updateDoc(postRef, { likesCount: increment(1) })
       setLiked(true)
       setLikes(l => l + 1)
+      if (profile) {
+        await createNotification({
+          targetUserId:   post.userId,
+          type:           "like",
+          fromUserId:     user.uid,
+          fromUserName:   profile.displayName,
+          fromUserAvatar: profile.avatarEmoji,
+          fromUserColor:  profile.profileColor,
+          postId:         post.id,
+          postImageUrl:   post.imageUrl,
+        })
+      }
     }
   }
 

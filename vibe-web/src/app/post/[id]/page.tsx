@@ -14,6 +14,7 @@ import { useAuth } from "@/hooks/useAuth"
 import { Avatar } from "@/components/ui/Avatar"
 import { profileColors } from "@/lib/design"
 import { formatRelativeTime } from "@/lib/utils"
+import { createNotification } from "@/lib/notifications"
 import type { Post, Comment } from "@/types"
 
 export default function PostDetailPage({ params }: { params: Promise<{ id: string }> }) {
@@ -61,6 +62,19 @@ export default function PostDetailPage({ params }: { params: Promise<{ id: strin
       text: text.trim(), createdAt: serverTimestamp(),
     })
     await updateDoc(doc(db, "posts", id), { commentsCount: increment(1) })
+    // notify post owner
+    if (post) {
+      await createNotification({
+        targetUserId:   post.userId,
+        type:           "comment",
+        fromUserId:     user.uid,
+        fromUserName:   profile.displayName,
+        fromUserAvatar: profile.avatarEmoji,
+        fromUserColor:  profile.profileColor,
+        postId:         id,
+        postImageUrl:   post.imageUrl,
+      })
+    }
     setText("")
     setSending(false)
     setTimeout(() => bottomRef.current?.scrollIntoView({ behavior: "smooth" }), 100)
