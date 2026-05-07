@@ -1,6 +1,12 @@
 import Foundation
 import SwiftUI
 
+enum CanvasBgType: String, CaseIterable, Codable {
+    case blank = "Boş Sayfa"
+    case grid = "Kareli Sayfa"
+    case lined = "Çizgili Sayfa"
+}
+
 enum ProfileColor: String, CaseIterable, Codable {
     case blue, orange, red, green, purple, pink, teal, indigo, yellow, mint
 
@@ -25,13 +31,15 @@ struct UserProfile: Codable, Identifiable {
     var name: String
     var avatarEmoji: String
     var profileColor: ProfileColor
+    var canvasBgType: CanvasBgType?
     let createdAt: Date
 
-    init(id: UUID = UUID(), name: String, avatarEmoji: String, profileColor: ProfileColor) {
+    init(id: UUID = UUID(), name: String, avatarEmoji: String, profileColor: ProfileColor, canvasBgType: CanvasBgType? = .blank) {
         self.id = id
         self.name = name
         self.avatarEmoji = avatarEmoji
         self.profileColor = profileColor
+        self.canvasBgType = canvasBgType
         self.createdAt = Date()
     }
 }

@@ -20,18 +20,33 @@ struct CanvasView: View {
     @State private var emotionPulse = false
     @State private var savedFeedback = false
 
+    @State private var bgType: CanvasBgType
+    @State private var customBgColor: Color = Color(UIColor.systemBackground)
+
     private let drawingStore: DrawingStore
 
     init(user: UserProfile) {
         self.user = user
         _galleryStore = StateObject(wrappedValue: GalleryStore(userId: user.id))
         self.drawingStore = DrawingStore(userId: user.id)
+        _bgType = State(initialValue: user.canvasBgType ?? .blank)
     }
 
     var body: some View {
         ZStack(alignment: .top) {
             // Arkaplan
-            Color(UIColor.systemBackground).ignoresSafeArea()
+            customBgColor.ignoresSafeArea()
+            
+            if bgType == .grid {
+                GridPattern()
+                    .stroke(AppColor.inkMuted.opacity(0.15), lineWidth: 0.5)
+                    .ignoresSafeArea()
+            } else if bgType == .lined {
+                LinedPattern()
+                    .stroke(AppColor.inkMuted.opacity(0.15), lineWidth: 0.5)
+                    .ignoresSafeArea()
+            }
+            
             biometricService.currentEmotion.color
                 .opacity(0.07)
                 .ignoresSafeArea()
@@ -143,6 +158,17 @@ struct CanvasView: View {
                     Label("İleri Al", systemImage: "arrow.uturn.forward")
                 }.disabled(!canRedo)
                 Divider()
+                Menu {
+                    Picker("Sayfa Tipi", selection: $bgType) {
+                        ForEach(CanvasBgType.allCases, id: \.self) { type in
+                            Text(type.rawValue).tag(type)
+                        }
+                    }
+                    ColorPicker("Sayfa Rengi", selection: $customBgColor)
+                } label: {
+                    Label("Tuval Arka Planı", systemImage: "square.grid.2x2")
+                }
+                Divider()
                 Button { saveToGallery() } label: {
                     Label("Galeriye Kaydet", systemImage: "square.and.arrow.down")
                 }
@@ -217,6 +243,23 @@ struct CanvasView: View {
             .background(AppColor.surface)
             .clipShape(Capsule())
             .overlay(Capsule().strokeBorder(AppColor.divider, lineWidth: 0.5))
+
+            Menu {
+                Picker("Sayfa Tipi", selection: $bgType) {
+                    ForEach(CanvasBgType.allCases, id: \.self) { type in
+                        Text(type.rawValue).tag(type)
+                    }
+                }
+                ColorPicker("Sayfa Rengi", selection: $customBgColor)
+            } label: {
+                Image(systemName: "square.grid.2x2")
+                    .font(.system(size: 14, weight: .semibold))
+                    .foregroundColor(AppColor.ink)
+                    .frame(width: 36, height: 36)
+                    .background(AppColor.surface)
+                    .clipShape(Circle())
+                    .overlay(Circle().strokeBorder(AppColor.divider, lineWidth: 0.5))
+            }
 
             iconButton("photo.stack") { isShowingGallery = true }
             iconButton("square.and.arrow.down") { saveToGallery() }
@@ -395,5 +438,50 @@ struct CanvasView: View {
             self.canUndo = canvasView.undoManager?.canUndo ?? false
             self.canRedo = canvasView.undoManager?.canRedo ?? false
         }
+    }
+}
+
+// MARK: - Arkaplan Şekilleri
+
+struct GridPattern: Shape {
+    let spacing: CGFloat = 24
+    
+    func path(in rect: CGRect) -> Path {
+        var path = Path()
+        
+        let cols = Int(rect.width / spacing)
+        let rows = Int(rect.height / spacing)
+        
+        for i in 0...cols {
+            let x = CGFloat(i) * spacing
+            path.move(to: CGPoint(x: x, y: 0))
+            path.addLine(to: CGPoint(x: x, y: rect.height))
+        }
+        
+        for i in 0...rows {
+            let y = CGFloat(i) * spacing
+            path.move(to: CGPoint(x: 0, y: y))
+            path.addLine(to: CGPoint(x: rect.width, y: y))
+        }
+        
+        return path
+    }
+}
+
+struct LinedPattern: Shape {
+    let spacing: CGFloat = 30
+    
+    func path(in rect: CGRect) -> Path {
+        var path = Path()
+        
+        let rows = Int(rect.height / spacing)
+        
+        for i in 0...rows {
+            let y = CGFloat(i) * spacing
+            path.move(to: CGPoint(x: 0, y: y))
+            path.addLine(to: CGPoint(x: rect.width, y: y))
+        }
+        
+        return path
     }
 }

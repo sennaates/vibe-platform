@@ -8,15 +8,16 @@ private struct CanvasPreset: Identifiable {
     let emoji: String
     let color: ProfileColor
     let description: String
+    let bgType: CanvasBgType
 }
 
 private let canvasPresets: [CanvasPreset] = [
-    CanvasPreset(name: "Boş Kanvas", emoji: "🎨", color: .blue,
-                 description: "Serbest"),
-    CanvasPreset(name: "Duygu Günlüğü", emoji: "📓", color: .purple,
-                 description: "Keşfet"),
-    CanvasPreset(name: "Hızlı Eskiz", emoji: "⚡", color: .orange,
-                 description: "Hızlı"),
+    CanvasPreset(name: "Boş Sayfa", emoji: "📄", color: .blue,
+                 description: "Standart düz sayfa", bgType: .blank),
+    CanvasPreset(name: "Kareli Sayfa", emoji: "🧮", color: .purple,
+                 description: "Geometri & Tasarım", bgType: .grid),
+    CanvasPreset(name: "Çizgili Sayfa", emoji: "📝", color: .orange,
+                 description: "Yazı ve Notlar", bgType: .lined),
 ]
 
 // MARK: - Ana Görünüm
@@ -123,7 +124,8 @@ struct UserListView: View {
                         let profile = UserProfile(
                             name: preset.name,
                             avatarEmoji: preset.emoji,
-                            profileColor: preset.color
+                            profileColor: preset.color,
+                            canvasBgType: preset.bgType
                         )
                         userStore.add(profile)
                         HapticManager.impact(.medium)
