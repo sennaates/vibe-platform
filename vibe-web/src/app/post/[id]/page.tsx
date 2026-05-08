@@ -6,9 +6,10 @@ import Link from "next/link"
 import { useRouter } from "next/navigation"
 import {
   doc, getDoc, collection, query, orderBy,
-  onSnapshot, addDoc, serverTimestamp, updateDoc, increment, deleteDoc
+  onSnapshot, addDoc, serverTimestamp, updateDoc, increment, deleteDoc,
+  setDoc
 } from "firebase/firestore"
-import { ArrowLeft, Send, Heart, Trash2, MoreHorizontal } from "lucide-react"
+import { ArrowLeft, Send, Heart, Trash2, MoreHorizontal, MessageCircle } from "lucide-react"
 import { db } from "@/lib/firebase"
 import { useAuth } from "@/hooks/useAuth"
 import { Avatar } from "@/components/ui/Avatar"
@@ -28,13 +29,25 @@ export default function PostDetailPage({ params }: { params: Promise<{ id: strin
   const [sending, setSending]     = useState(false)
   const [deleting, setDeleting]   = useState(false)
   const [showMenu, setShowMenu]   = useState(false)
+  const [liked, setLiked]         = useState(false)
+  const [likes, setLikes]         = useState(0)
   const bottomRef                 = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
     getDoc(doc(db, "posts", id)).then(snap => {
-      if (snap.exists()) setPost({ id: snap.id, ...snap.data() } as Post)
+      if (snap.exists()) {
+        const data = { id: snap.id, ...snap.data() } as Post
+        setPost(data)
+        setLikes(data.likesCount)
+      }
     })
   }, [id])
+
+  // Check if current user liked this post
+  useEffect(() => {
+    if (!user) return
+    getDoc(doc(db, "posts", id, "likes", user.uid)).then(snap => setLiked(snap.exists()))
+  }, [id, user])
 
   useEffect(() => {
     const q = query(collection(db, "posts", id, "comments"), orderBy("createdAt", "asc"))
@@ -44,6 +57,35 @@ export default function PostDetailPage({ params }: { params: Promise<{ id: strin
   }, [id])
 
   const isOwnPost = user?.uid === post?.userId
+
+  async function toggleLike() {
+    if (!user || !post) return
+    const likeRef = doc(db, "posts", id, "likes", user.uid)
+    const postRef = doc(db, "posts", id)
+    if (liked) {
+      await deleteDoc(likeRef)
+      await updateDoc(postRef, { likesCount: increment(-1) })
+      setLiked(false)
+      setLikes(l => l - 1)
+    } else {
+      await setDoc(likeRef, { userId: user.uid, createdAt: new Date() })
+      await updateDoc(postRef, { likesCount: increment(1) })
+      setLiked(true)
+      setLikes(l => l + 1)
+      if (profile) {
+        await createNotification({
+          targetUserId:   post.userId,
+          type:           "like",
+          fromUserId:     user.uid,
+          fromUserName:   profile.displayName,
+          fromUserAvatar: profile.avatarEmoji,
+          fromUserColor:  profile.profileColor,
+          postId:         id,
+          postImageUrl:   post.imageUrl,
+        })
+      }
+    }
+  }
 
   async function handleDelete() {
     if (!post || !user || !isOwnPost) return
@@ -171,9 +213,25 @@ export default function PostDetailPage({ params }: { params: Promise<{ id: strin
               )}
             </div>
 
+            {/* Actions row */}
+            <div className="flex items-center gap-5 px-5 pt-3 pb-1">
+              <button
+                onClick={toggleLike}
+                className="flex items-center gap-1.5 text-sm font-medium transition-all active:scale-90"
+                style={{ color: liked ? "#e53e3e" : "#A8A29E" }}
+              >
+                <Heart size={20} className={liked ? "fill-red-500" : ""} />
+                <span>{likes}</span>
+              </button>
+              <div className="flex items-center gap-1.5 text-sm font-medium text-[#A8A29E]">
+                <MessageCircle size={20} />
+                <span>{comments.length}</span>
+              </div>
+            </div>
+
             {/* Caption */}
             {post.caption && (
-              <p className="px-5 py-4 text-sm text-[#1C1917] leading-relaxed">{post.caption}</p>
+              <p className="px-5 py-3 text-sm text-[#1C1917] leading-relaxed">{post.caption}</p>
             )}
           </div>
         </div>

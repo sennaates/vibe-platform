@@ -14,6 +14,7 @@ import { auth, db } from "@/lib/firebase"
 import { useAuth } from "@/hooks/useAuth"
 import { profileColors } from "@/lib/design"
 import { createNotification } from "@/lib/notifications"
+import { FollowListModal } from "@/components/profile/FollowListModal"
 import type { SocialUser, Post } from "@/types"
 
 export default function ProfilePage({ params }: { params: Promise<{ uid: string }> }) {
@@ -27,6 +28,7 @@ export default function ProfilePage({ params }: { params: Promise<{ uid: string 
   const [following, setFollowing]           = useState(false)
   const [followLoading, setFollowLoading]   = useState(false)
   const [localFollowers, setLocalFollowers] = useState(0)
+  const [followModal, setFollowModal]       = useState<"followers" | "following" | null>(null)
 
   const isOwn  = user?.uid === uid
   const accent = profileColors[pageProfile?.profileColor ?? "blue"] ?? "#4A7FA5"
@@ -190,9 +192,14 @@ export default function ProfilePage({ params }: { params: Promise<{ uid: string 
         {/* Stats */}
         <div className="flex gap-6 sm:gap-8 mt-5 pb-6 border-b border-[#E8E4DC]">
           <StatPill value={pageProfile.postsCount} label="çizim" />
-          <StatPill value={localFollowers} label="takipçi" />
-          <StatPill value={pageProfile.followingCount} label="takip" />
+          <StatPill value={localFollowers} label="takipçi" onClick={() => setFollowModal("followers")} />
+          <StatPill value={pageProfile.followingCount} label="takip" onClick={() => setFollowModal("following")} />
         </div>
+
+        {/* Follow list modal */}
+        {followModal && (
+          <FollowListModal uid={uid} mode={followModal} onClose={() => setFollowModal(null)} />
+        )}
 
         {/* Grid */}
         <div className="py-6 sm:py-8">
@@ -242,7 +249,18 @@ export default function ProfilePage({ params }: { params: Promise<{ uid: string 
   )
 }
 
-function StatPill({ value, label }: { value: number; label: string }) {
+function StatPill({ value, label, onClick }: { value: number; label: string; onClick?: () => void }) {
+  if (onClick) {
+    return (
+      <button
+        onClick={onClick}
+        className="text-left hover:opacity-70 transition-opacity active:scale-95"
+      >
+        <span className="font-bold text-[#1C1917] text-xl sm:text-2xl">{value}</span>
+        <span className="text-sm text-[#78716C] ml-1.5 underline-offset-2 hover:underline">{label}</span>
+      </button>
+    )
+  }
   return (
     <div>
       <span className="font-bold text-[#1C1917] text-xl sm:text-2xl">{value}</span>
