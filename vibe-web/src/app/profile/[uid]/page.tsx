@@ -3,32 +3,41 @@
 import { use, useEffect, useState } from "react"
 import Image from "next/image"
 import Link from "next/link"
-import { doc, getDoc, collection, query, where, orderBy, getDocs } from "firebase/firestore"
+import {
+  doc, getDoc, collection, query, where, orderBy, getDocs,
+  setDoc, deleteDoc, updateDoc, increment, serverTimestamp
+} from "firebase/firestore"
 import { signOut } from "firebase/auth"
 import { useRouter } from "next/navigation"
-import { ArrowLeft, LogOut } from "lucide-react"
+import { ArrowLeft, LogOut, UserPlus, UserCheck, Loader2 } from "lucide-react"
 import { auth, db } from "@/lib/firebase"
 import { useAuth } from "@/hooks/useAuth"
 import { profileColors } from "@/lib/design"
+import { createNotification } from "@/lib/notifications"
 import type { SocialUser, Post } from "@/types"
 
 export default function ProfilePage({ params }: { params: Promise<{ uid: string }> }) {
   const { uid } = use(params)
-  const { user } = useAuth()
+  const { user, profile: myProfile } = useAuth()
   const router = useRouter()
 
-  const [profile, setProfile] = useState<SocialUser | null>(null)
-  const [posts, setPosts]     = useState<Post[]>([])
-  const [loading, setLoading] = useState(true)
+  const [pageProfile, setPageProfile]       = useState<SocialUser | null>(null)
+  const [posts, setPosts]                   = useState<Post[]>([])
+  const [loading, setLoading]               = useState(true)
+  const [following, setFollowing]           = useState(false)
+  const [followLoading, setFollowLoading]   = useState(false)
+  const [localFollowers, setLocalFollowers] = useState(0)
 
   const isOwn  = user?.uid === uid
-  const accent = profileColors[profile?.profileColor ?? "blue"] ?? "#4A7FA5"
+  const accent = profileColors[pageProfile?.profileColor ?? "blue"] ?? "#4A7FA5"
 
   useEffect(() => {
     async function load() {
       const snap = await getDoc(doc(db, "users", uid))
       if (!snap.exists()) { setLoading(false); return }
-      setProfile(snap.data() as SocialUser)
+      const data = snap.data() as SocialUser
+      setPageProfile(data)
+      setLocalFollowers(data.followersCount)
       const q = query(collection(db, "posts"), where("userId", "==", uid), orderBy("createdAt", "desc"))
       const postSnap = await getDocs(q)
       setPosts(postSnap.docs.map(d => ({ id: d.id, ...d.data() } as Post)))
@@ -36,6 +45,41 @@ export default function ProfilePage({ params }: { params: Promise<{ uid: string 
     }
     load()
   }, [uid])
+
+  useEffect(() => {
+    if (!user || isOwn) return
+    getDoc(doc(db, "follows", `${user.uid}_${uid}`)).then(snap => setFollowing(snap.exists()))
+  }, [user, uid, isOwn])
+
+  async function handleFollow() {
+    if (!user) { router.push("/auth"); return }
+    setFollowLoading(true)
+    const followRef = doc(db, "follows", `${user.uid}_${uid}`)
+    if (following) {
+      await deleteDoc(followRef)
+      await updateDoc(doc(db, "users", uid), { followersCount: increment(-1) })
+      await updateDoc(doc(db, "users", user.uid), { followingCount: increment(-1) })
+      setFollowing(false)
+      setLocalFollowers(c => c - 1)
+    } else {
+      await setDoc(followRef, { followerId: user.uid, followedId: uid, createdAt: serverTimestamp() })
+      await updateDoc(doc(db, "users", uid), { followersCount: increment(1) })
+      await updateDoc(doc(db, "users", user.uid), { followingCount: increment(1) })
+      if (myProfile) {
+        await createNotification({
+          targetUserId:   uid,
+          type:           "follow",
+          fromUserId:     user.uid,
+          fromUserName:   myProfile.displayName,
+          fromUserAvatar: myProfile.avatarEmoji,
+          fromUserColor:  myProfile.profileColor,
+        })
+      }
+      setFollowing(true)
+      setLocalFollowers(c => c + 1)
+    }
+    setFollowLoading(false)
+  }
 
   async function handleLogout() {
     await signOut(auth)
@@ -57,7 +101,7 @@ export default function ProfilePage({ params }: { params: Promise<{ uid: string 
     )
   }
 
-  if (!profile) {
+  if (!pageProfile) {
     return (
       <div className="flex flex-col items-center justify-center min-h-[calc(100vh-56px)] gap-4">
         <span className="text-5xl block">👤</span>
@@ -74,7 +118,6 @@ export default function ProfilePage({ params }: { params: Promise<{ uid: string 
         className="w-full h-40 sm:h-52 lg:h-60 relative"
         style={{ background: `linear-gradient(135deg, ${accent}60, ${accent}25, ${accent}10)` }}
       >
-        {/* Back button */}
         {!isOwn && (
           <Link
             href="/"
@@ -84,8 +127,6 @@ export default function ProfilePage({ params }: { params: Promise<{ uid: string 
             Geri
           </Link>
         )}
-
-        {/* Logout */}
         {isOwn && (
           <button
             onClick={handleLogout}
@@ -105,26 +146,52 @@ export default function ProfilePage({ params }: { params: Promise<{ uid: string 
             className="w-24 h-24 sm:w-28 sm:h-28 rounded-full flex items-center justify-center text-5xl sm:text-6xl border-4 border-[#FAF8F4] shadow-md"
             style={{ backgroundColor: accent + "25" }}
           >
-            {profile.avatarEmoji}
+            {pageProfile.avatarEmoji}
           </div>
-          {isOwn && (
-            <Link
-              href="/canvas"
-              className="px-4 py-2 bg-[#D9723F] text-white rounded-[14px] text-sm font-semibold shadow-sm hover:bg-[#C4622F] transition-colors mb-1"
-            >
-              + Yeni Çizim
-            </Link>
-          )}
+
+          <div className="flex gap-2 mb-1">
+            {isOwn ? (
+              <>
+                <Link href="/profile/edit"
+                  className="px-4 py-2 bg-white border border-[#E8E4DC] text-[#1C1917] rounded-[14px] text-sm font-semibold shadow-sm hover:bg-[#F5F3EF] transition-colors">
+                  Düzenle
+                </Link>
+                <Link href="/canvas"
+                  className="px-4 py-2 bg-[#D9723F] text-white rounded-[14px] text-sm font-semibold shadow-sm hover:bg-[#C4622F] transition-colors">
+                  + Çizim
+                </Link>
+              </>
+            ) : (
+              <button
+                onClick={handleFollow}
+                disabled={followLoading}
+                className="flex items-center gap-1.5 px-5 py-2 rounded-[14px] text-sm font-semibold shadow-sm transition-all active:scale-95 disabled:opacity-60"
+                style={following
+                  ? { backgroundColor: "#F5F3EF", color: "#78716C", border: "1px solid #E8E4DC" }
+                  : { backgroundColor: accent, color: "#fff" }
+                }
+              >
+                {followLoading
+                  ? <Loader2 size={14} className="animate-spin" />
+                  : following
+                    ? <><UserCheck size={14} /> Takip Ediliyor</>
+                    : <><UserPlus size={14} /> Takip Et</>
+                }
+              </button>
+            )}
+          </div>
         </div>
 
-        <h1 className="font-bold text-[#1C1917] text-2xl sm:text-3xl">{profile.displayName}</h1>
-        {profile.bio && <p className="text-sm sm:text-base text-[#78716C] mt-1.5 max-w-lg leading-relaxed">{profile.bio}</p>}
+        <h1 className="font-bold text-[#1C1917] text-2xl sm:text-3xl">{pageProfile.displayName}</h1>
+        {pageProfile.bio && (
+          <p className="text-sm sm:text-base text-[#78716C] mt-1.5 max-w-lg leading-relaxed">{pageProfile.bio}</p>
+        )}
 
         {/* Stats */}
         <div className="flex gap-6 sm:gap-8 mt-5 pb-6 border-b border-[#E8E4DC]">
-          <StatPill value={profile.postsCount} label="çizim" />
-          <StatPill value={profile.followersCount} label="takipçi" />
-          <StatPill value={profile.followingCount} label="takip" />
+          <StatPill value={pageProfile.postsCount} label="çizim" />
+          <StatPill value={localFollowers} label="takipçi" />
+          <StatPill value={pageProfile.followingCount} label="takip" />
         </div>
 
         {/* Grid */}

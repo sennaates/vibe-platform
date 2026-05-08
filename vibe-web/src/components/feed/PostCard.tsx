@@ -2,7 +2,7 @@
 
 import Link from "next/link"
 import Image from "next/image"
-import { Heart, MessageCircle } from "lucide-react"
+import { Heart, MessageCircle, MoreHorizontal, Trash2 } from "lucide-react"
 import { useState } from "react"
 import { doc, updateDoc, increment, setDoc, deleteDoc } from "firebase/firestore"
 import { db } from "@/lib/firebase"
@@ -10,17 +10,23 @@ import { useAuth } from "@/hooks/useAuth"
 import { Avatar } from "@/components/ui/Avatar"
 import { profileColors } from "@/lib/design"
 import { formatRelativeTime } from "@/lib/utils"
+import { createNotification } from "@/lib/notifications"
 import type { Post } from "@/types"
 
 interface PostCardProps {
   post: Post
   isLiked?: boolean
+  onDeleted?: (id: string) => void
 }
 
-export function PostCard({ post, isLiked: initialLiked = false }: PostCardProps) {
-  const { user } = useAuth()
-  const [liked, setLiked] = useState(initialLiked)
-  const [likes, setLikes] = useState(post.likesCount)
+export function PostCard({ post, isLiked: initialLiked = false, onDeleted }: PostCardProps) {
+  const { user, profile } = useAuth()
+  const [liked, setLiked]     = useState(initialLiked)
+  const [likes, setLikes]     = useState(post.likesCount)
+  const [showMenu, setShowMenu] = useState(false)
+  const [deleted, setDeleted] = useState(false)
+
+  const isOwn = user?.uid === post.userId
 
   const accent = profileColors[post.userColor] ?? "#4A7FA5"
 
@@ -28,6 +34,15 @@ export function PostCard({ post, isLiked: initialLiked = false }: PostCardProps)
   const emotionParts = post.emotion.split(" ")
   const emotionLabel = emotionParts[0]
   const emotionEmoji = emotionParts[1] ?? "🎨"
+
+  async function handleDelete() {
+    await deleteDoc(doc(db, "posts", post.id))
+    await updateDoc(doc(db, "users", post.userId), { postsCount: increment(-1) })
+    setDeleted(true)
+    onDeleted?.(post.id)
+  }
+
+  if (deleted) return null
 
   async function toggleLike() {
     if (!user) return
@@ -44,6 +59,18 @@ export function PostCard({ post, isLiked: initialLiked = false }: PostCardProps)
       await updateDoc(postRef, { likesCount: increment(1) })
       setLiked(true)
       setLikes(l => l + 1)
+      if (profile) {
+        await createNotification({
+          targetUserId:   post.userId,
+          type:           "like",
+          fromUserId:     user.uid,
+          fromUserName:   profile.displayName,
+          fromUserAvatar: profile.avatarEmoji,
+          fromUserColor:  profile.profileColor,
+          postId:         post.id,
+          postImageUrl:   post.imageUrl,
+        })
+      }
     }
   }
 
@@ -65,7 +92,7 @@ export function PostCard({ post, isLiked: initialLiked = false }: PostCardProps)
           <p className="text-xs text-[#A8A29E] mt-0.5">{formatRelativeTime(post.createdAt)}</p>
         </div>
 
-        {/* Chips */}
+        {/* Chips + menu */}
         <div className="flex items-center gap-2 shrink-0">
           {/* Emotion chip */}
           <span
@@ -82,6 +109,32 @@ export function PostCard({ post, isLiked: initialLiked = false }: PostCardProps)
               <span className="text-[10px]">♥</span>
               {post.bpm}
             </span>
+          )}
+
+          {/* Own post menu */}
+          {isOwn && (
+            <div className="relative">
+              <button
+                onClick={() => setShowMenu(m => !m)}
+                className="p-1.5 rounded-[8px] text-[#A8A29E] hover:bg-[#F5F3EF] hover:text-[#78716C] transition-colors"
+              >
+                <MoreHorizontal size={15} />
+              </button>
+              {showMenu && (
+                <>
+                  <div className="fixed inset-0 z-10" onClick={() => setShowMenu(false)} />
+                  <div className="absolute right-0 top-8 z-20 bg-white border border-[#E8E4DC] rounded-[14px] shadow-lg py-1 min-w-[130px]">
+                    <button
+                      onClick={() => { setShowMenu(false); handleDelete() }}
+                      className="w-full flex items-center gap-2.5 px-4 py-2.5 text-sm font-medium text-red-500 hover:bg-red-50 transition-colors"
+                    >
+                      <Trash2 size={13} />
+                      Sil
+                    </button>
+                  </div>
+                </>
+              )}
+            </div>
           )}
         </div>
       </div>
