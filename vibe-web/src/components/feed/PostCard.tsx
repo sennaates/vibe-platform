@@ -46,16 +46,19 @@ export function PostCard({ post, isLiked: initialLiked = false, onDeleted }: Pos
 
   async function toggleLike() {
     if (!user) return
-    const likeRef = doc(db, "posts", post.id, "likes", user.uid)
-    const postRef = doc(db, "posts", post.id)
+    const likeRef    = doc(db, "posts", post.id, "likes", user.uid)
+    const postRef    = doc(db, "posts", post.id)
+    const userLikeRef = doc(db, "userLikes", user.uid, "items", post.id)
 
     if (liked) {
       await deleteDoc(likeRef)
+      await deleteDoc(userLikeRef)
       await updateDoc(postRef, { likesCount: increment(-1) })
       setLiked(false)
       setLikes(l => l - 1)
     } else {
       await setDoc(likeRef, { userId: user.uid, createdAt: new Date() })
+      await setDoc(userLikeRef, { postId: post.id, likedAt: new Date() })
       await updateDoc(postRef, { likesCount: increment(1) })
       setLiked(true)
       setLikes(l => l + 1)

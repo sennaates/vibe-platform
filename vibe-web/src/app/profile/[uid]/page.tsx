@@ -7,6 +7,7 @@ import {
   doc, getDoc, collection, query, where, orderBy, getDocs,
   setDoc, deleteDoc, updateDoc, increment, serverTimestamp
 } from "firebase/firestore"
+import { Grid3X3, Heart } from "lucide-react"
 import { signOut } from "firebase/auth"
 import { useRouter } from "next/navigation"
 import { ArrowLeft, LogOut, UserPlus, UserCheck, Loader2 } from "lucide-react"
@@ -29,6 +30,9 @@ export default function ProfilePage({ params }: { params: Promise<{ uid: string 
   const [followLoading, setFollowLoading]   = useState(false)
   const [localFollowers, setLocalFollowers] = useState(0)
   const [followModal, setFollowModal]       = useState<"followers" | "following" | null>(null)
+  const [profileTab, setProfileTab]         = useState<"posts" | "liked">("posts")
+  const [likedPosts, setLikedPosts]         = useState<Post[]>([])
+  const [likedLoading, setLikedLoading]     = useState(false)
 
   const isOwn  = user?.uid === uid
   const accent = profileColors[pageProfile?.profileColor ?? "blue"] ?? "#4A7FA5"
@@ -52,6 +56,23 @@ export default function ProfilePage({ params }: { params: Promise<{ uid: string 
     if (!user || isOwn) return
     getDoc(doc(db, "follows", `${user.uid}_${uid}`)).then(snap => setFollowing(snap.exists()))
   }, [user, uid, isOwn])
+
+  // Load liked posts on tab switch
+  useEffect(() => {
+    if (profileTab !== "liked" || likedPosts.length > 0) return
+    setLikedLoading(true)
+    async function loadLiked() {
+      const snap = await getDocs(
+        query(collection(db, "userLikes", uid, "items"), orderBy("likedAt", "desc"))
+      )
+      const postIds = snap.docs.map(d => d.data().postId as string)
+      if (postIds.length === 0) { setLikedLoading(false); return }
+      const postDocs = await Promise.all(postIds.map(pid => getDoc(doc(db, "posts", pid))))
+      setLikedPosts(postDocs.filter(d => d.exists()).map(d => ({ id: d.id, ...d.data() } as Post)))
+      setLikedLoading(false)
+    }
+    loadLiked()
+  }, [profileTab, uid, likedPosts.length])
 
   async function handleFollow() {
     if (!user) { router.push("/auth"); return }
@@ -201,51 +222,101 @@ export default function ProfilePage({ params }: { params: Promise<{ uid: string 
           <FollowListModal uid={uid} mode={followModal} onClose={() => setFollowModal(null)} />
         )}
 
+        {/* Tab bar */}
+        <div className="flex border-b border-[#E8E4DC] mt-2">
+          <ProfileTabBtn active={profileTab === "posts"} onClick={() => setProfileTab("posts")}>
+            <Grid3X3 size={15} /> Çizimler
+          </ProfileTabBtn>
+          <ProfileTabBtn active={profileTab === "liked"} onClick={() => setProfileTab("liked")}>
+            <Heart size={15} /> Beğendikleri
+          </ProfileTabBtn>
+        </div>
+
         {/* Grid */}
-        <div className="py-6 sm:py-8">
-          {posts.length === 0 ? (
-            <div className="flex flex-col items-center py-20 text-center gap-3">
-              <span className="text-5xl block">🎨</span>
-              <p className="text-sm font-medium text-[#78716C]">
-                {isOwn ? "Henüz çizim paylaşmadın" : "Henüz çizim yok"}
-              </p>
-              {isOwn && (
-                <Link href="/canvas" className="mt-2 px-5 py-2.5 bg-[#D9723F] text-white rounded-[14px] text-sm font-semibold shadow-sm">
-                  İlk çizimi yap
-                </Link>
-              )}
-            </div>
-          ) : (
-            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-2 sm:gap-3">
-              {posts.map(post => {
-                const postAccent = profileColors[post.userColor] ?? "#4A7FA5"
-                return (
-                  <Link
-                    key={post.id}
-                    href={`/post/${post.id}`}
-                    className="aspect-square relative rounded-[14px] overflow-hidden bg-[#F5F3EF] group shadow-sm hover:shadow-md transition-shadow"
-                  >
-                    {post.imageUrl ? (
-                      <Image
-                        src={post.imageUrl} alt={post.emotion} fill
-                        className="object-cover group-hover:scale-105 transition-transform duration-300"
-                        sizes="(max-width: 640px) 50vw, (max-width: 1024px) 25vw, 20vw"
-                      />
-                    ) : (
-                      <div className="w-full h-full flex items-center justify-center text-3xl"
-                        style={{ background: `linear-gradient(135deg, ${postAccent}30, transparent)` }}>
-                        🎨
-                      </div>
-                    )}
-                    <div className="absolute inset-0 bg-gradient-to-t from-black/40 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-200" />
+        <div className="py-5 sm:py-6">
+          {profileTab === "posts" ? (
+            posts.length === 0 ? (
+              <div className="flex flex-col items-center py-20 text-center gap-3">
+                <span className="text-5xl block">🎨</span>
+                <p className="text-sm font-medium text-[#78716C]">
+                  {isOwn ? "Henüz çizim paylaşmadın" : "Henüz çizim yok"}
+                </p>
+                {isOwn && (
+                  <Link href="/canvas" className="mt-2 px-5 py-2.5 bg-[#D9723F] text-white rounded-[14px] text-sm font-semibold shadow-sm">
+                    İlk çizimi yap
                   </Link>
-                )
-              })}
-            </div>
+                )}
+              </div>
+            ) : (
+              <PostGrid posts={posts} />
+            )
+          ) : (
+            likedLoading ? (
+              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-2 sm:gap-3 animate-pulse">
+                {[...Array(6)].map((_, i) => <div key={i} className="aspect-square bg-[#E8E4DC] rounded-[14px]" />)}
+              </div>
+            ) : likedPosts.length === 0 ? (
+              <div className="flex flex-col items-center py-20 text-center gap-3">
+                <span className="text-5xl block">❤️</span>
+                <p className="text-sm font-medium text-[#78716C]">
+                  {isOwn ? "Henüz beğendiğin çizim yok" : "Henüz beğeni yok"}
+                </p>
+              </div>
+            ) : (
+              <PostGrid posts={likedPosts} />
+            )
           )}
         </div>
       </div>
     </div>
+  )
+}
+
+function PostGrid({ posts }: { posts: Post[] }) {
+  return (
+    <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-2 sm:gap-3">
+      {posts.map(post => {
+        const postAccent = profileColors[post.userColor] ?? "#4A7FA5"
+        return (
+          <Link
+            key={post.id}
+            href={`/post/${post.id}`}
+            className="aspect-square relative rounded-[14px] overflow-hidden bg-[#F5F3EF] group shadow-sm hover:shadow-md transition-shadow"
+          >
+            {post.imageUrl ? (
+              <Image
+                src={post.imageUrl} alt={post.emotion} fill
+                className="object-cover group-hover:scale-105 transition-transform duration-300"
+                sizes="(max-width: 640px) 50vw, (max-width: 1024px) 25vw, 20vw"
+              />
+            ) : (
+              <div className="w-full h-full flex items-center justify-center text-3xl"
+                style={{ background: `linear-gradient(135deg, ${postAccent}30, transparent)` }}>
+                🎨
+              </div>
+            )}
+            <div className="absolute inset-0 bg-gradient-to-t from-black/40 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-200" />
+          </Link>
+        )
+      })}
+    </div>
+  )
+}
+
+function ProfileTabBtn({ active, onClick, children }: {
+  active: boolean; onClick: () => void; children: React.ReactNode
+}) {
+  return (
+    <button
+      onClick={onClick}
+      className={`flex items-center gap-1.5 px-5 py-3 text-sm font-semibold border-b-2 transition-colors ${
+        active
+          ? "border-[#1C1917] text-[#1C1917]"
+          : "border-transparent text-[#A8A29E] hover:text-[#78716C]"
+      }`}
+    >
+      {children}
+    </button>
   )
 }
 

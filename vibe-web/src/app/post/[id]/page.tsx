@@ -60,15 +60,18 @@ export default function PostDetailPage({ params }: { params: Promise<{ id: strin
 
   async function toggleLike() {
     if (!user || !post) return
-    const likeRef = doc(db, "posts", id, "likes", user.uid)
-    const postRef = doc(db, "posts", id)
+    const likeRef     = doc(db, "posts", id, "likes", user.uid)
+    const postRef     = doc(db, "posts", id)
+    const userLikeRef = doc(db, "userLikes", user.uid, "items", id)
     if (liked) {
       await deleteDoc(likeRef)
+      await deleteDoc(userLikeRef)
       await updateDoc(postRef, { likesCount: increment(-1) })
       setLiked(false)
       setLikes(l => l - 1)
     } else {
       await setDoc(likeRef, { userId: user.uid, createdAt: new Date() })
+      await setDoc(userLikeRef, { postId: id, likedAt: new Date() })
       await updateDoc(postRef, { likesCount: increment(1) })
       setLiked(true)
       setLikes(l => l + 1)
