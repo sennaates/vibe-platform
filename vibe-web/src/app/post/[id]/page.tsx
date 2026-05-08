@@ -257,12 +257,24 @@ export default function PostDetailPage({ params }: { params: Promise<{ id: strin
                 </div>
               ) : (
                 comments.map(c => (
-                  <div key={c.id} className="flex gap-3 px-5 py-3.5">
+                  <div key={c.id} className="flex gap-3 px-5 py-3.5 group">
                     <Avatar emoji={c.userAvatar} color={c.userColor} size="sm" className="mt-0.5 shrink-0" />
-                    <div className="min-w-0">
+                    <div className="min-w-0 flex-1">
                       <div className="flex items-baseline gap-1.5">
                         <span className="text-xs font-semibold text-[#1C1917]">{c.userName}</span>
                         <span className="text-[10px] text-[#A8A29E]">{formatRelativeTime(c.createdAt)}</span>
+                        {/* Delete own comment */}
+                        {user?.uid === c.userId && (
+                          <button
+                            onClick={async () => {
+                              await deleteDoc(doc(db, "posts", id, "comments", c.id))
+                              await updateDoc(doc(db, "posts", id), { commentsCount: increment(-1) })
+                            }}
+                            className="ml-auto opacity-0 group-hover:opacity-100 transition-opacity p-1 rounded text-[#A8A29E] hover:text-red-400"
+                          >
+                            <Trash2 size={11} />
+                          </button>
+                        )}
                       </div>
                       <p className="text-sm text-[#1C1917] mt-0.5 leading-relaxed break-words">{c.text}</p>
                     </div>

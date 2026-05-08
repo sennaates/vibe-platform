@@ -2,13 +2,15 @@
 
 import { useEffect, useState } from "react"
 import Link from "next/link"
+import Image from "next/image"
 import { collection, query, where, orderBy, getDocs } from "firebase/firestore"
 import {
   BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer,
-  LineChart, Line, CartesianGrid, Area, AreaChart,
+  CartesianGrid, Area, AreaChart,
 } from "recharts"
 import { db } from "@/lib/firebase"
 import { useAuth } from "@/hooks/useAuth"
+import { Timestamp } from "firebase/firestore"
 import type { Post } from "@/types"
 
 interface EmotionStat { label: string; emoji: string; count: number; color: string }
@@ -18,6 +20,26 @@ const EMOTION_COLORS: Record<string, string> = {
   "Heyecanlı": "#C0504A", "Kaygılı": "#7C5CBF", "Stresli": "#8B3A3A",
   "Üzgün": "#556B8B", "Yorgun": "#6B7280", "Huzurlu": "#C45F8A",
   "Odaklanmış": "#3A8FA0",
+}
+
+function calcStreak(posts: Post[]): number {
+  if (posts.length === 0) return 0
+  const daySet = new Set(
+    posts.map(p => {
+      const d = (p.createdAt as Timestamp).toDate()
+      d.setHours(0, 0, 0, 0)
+      return d.getTime()
+    })
+  )
+  const today = new Date()
+  today.setHours(0, 0, 0, 0)
+  let streak = 0
+  let check = today.getTime()
+  while (daySet.has(check)) {
+    streak++
+    check -= 86_400_000
+  }
+  return streak
 }
 
 export default function StatsPage() {
@@ -39,7 +61,7 @@ export default function StatsPage() {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 animate-pulse space-y-5">
         <div className="h-8 w-40 bg-[#E8E4DC] rounded-full" />
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-          {[...Array(4)].map((_, i) => <div key={i} className="h-28 bg-[#E8E4DC] rounded-[18px]" />)}
+          {[...Array(8)].map((_, i) => <div key={i} className="h-28 bg-[#E8E4DC] rounded-[18px]" />)}
         </div>
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
           <div className="h-64 bg-[#E8E4DC] rounded-[18px]" />
@@ -61,6 +83,7 @@ export default function StatsPage() {
     )
   }
 
+  // Derived stats
   const emotionMap: Record<string, EmotionStat> = {}
   posts.forEach(p => {
     const label = p.emotion.split(" ")[0]
@@ -69,13 +92,23 @@ export default function StatsPage() {
   })
   const emotionData = Object.values(emotionMap).sort((a, b) => b.count - a.count)
 
-  const bpmData = [...posts].reverse().slice(-30).map((p, i) => ({ index: i + 1, bpm: p.bpm, emotion: p.emotion.split(" ")[0] }))
-  const avgBpm = posts.length ? Math.round(posts.reduce((s, p) => s + p.bpm, 0) / posts.length) : 0
-  const maxBpm = posts.length ? Math.max(...posts.map(p => p.bpm)) : 0
-  const minBpm = posts.length ? Math.min(...posts.map(p => p.bpm)) : 0
-  const dominant = emotionData[0]
+  const bpmData = [...posts].reverse().slice(-30).map((p, i) => ({
+    index: i + 1, bpm: p.bpm, emotion: p.emotion.split(" ")[0]
+  }))
 
-  const tooltipStyle = { fontSize: 12, borderRadius: 12, border: "1px solid #E8E4DC", boxShadow: "0 4px 12px rgba(0,0,0,0.06)" }
+  const avgBpm    = posts.length ? Math.round(posts.reduce((s, p) => s + p.bpm, 0) / posts.length) : 0
+  const maxBpm    = posts.length ? Math.max(...posts.map(p => p.bpm)) : 0
+  const minBpm    = posts.length ? Math.min(...posts.map(p => p.bpm)) : 0
+  const dominant  = emotionData[0]
+  const totalLikes    = posts.reduce((s, p) => s + (p.likesCount ?? 0), 0)
+  const totalComments = posts.reduce((s, p) => s + (p.commentsCount ?? 0), 0)
+  const bestPost  = posts.length ? posts.reduce((a, b) => (b.likesCount ?? 0) > (a.likesCount ?? 0) ? b : a) : null
+  const streak    = calcStreak(posts)
+
+  const tooltipStyle = {
+    fontSize: 12, borderRadius: 12,
+    border: "1px solid #E8E4DC", boxShadow: "0 4px 12px rgba(0,0,0,0.06)"
+  }
 
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8 space-y-6">
@@ -96,15 +129,49 @@ export default function StatsPage() {
         </div>
       ) : (
         <>
-          {/* Stat cards — 4 columns on desktop */}
+          {/* Row 1: activity stats */}
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
-            <StatCard icon="🎨" label="Toplam Çizim" value={posts.length.toString()} accent="#D9723F" />
-            <StatCard icon="💡" label="Dominant Duygu" value={dominant ? `${dominant.emoji} ${dominant.label}` : "—"} accent={dominant?.color ?? "#D9723F"} />
-            <StatCard icon="💓" label="Ortalama BPM" value={avgBpm.toString()} accent="#C45F8A" />
-            <StatCard icon="⚡" label="BPM Aralığı" value={`${minBpm}–${maxBpm}`} accent="#D9723F" />
+            <StatCard icon="🎨" label="Toplam Çizim"   value={posts.length.toString()}                        accent="#D9723F" />
+            <StatCard icon="❤️" label="Alınan Beğeni"  value={totalLikes.toString()}                          accent="#e53e3e" />
+            <StatCard icon="💬" label="Alınan Yorum"   value={totalComments.toString()}                       accent="#6366f1" />
+            <StatCard icon="🔥" label="Günlük Seri"    value={streak > 0 ? `${streak} gün` : "Bugün başla!"} accent="#f97316" highlight={streak >= 3} />
           </div>
 
-          {/* Charts — side by side on desktop */}
+          {/* Row 2: emotion & bpm stats */}
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
+            <StatCard icon="💡" label="Dominant Duygu"  value={dominant ? `${dominant.emoji} ${dominant.label}` : "—"} accent={dominant?.color ?? "#D9723F"} />
+            <StatCard icon="💓" label="Ortalama BPM"   value={avgBpm.toString()}                              accent="#C45F8A" />
+            <StatCard icon="⚡" label="BPM Aralığı"    value={`${minBpm}–${maxBpm}`}                          accent="#D9723F" />
+            <StatCard icon="✨" label="Duygu Çeşidi"   value={`${emotionData.length} farklı`}                 accent="#D9A23F" />
+          </div>
+
+          {/* Best post */}
+          {bestPost && bestPost.likesCount > 0 && (
+            <div className="bg-white border border-[#E8E4DC] rounded-[22px] p-5 shadow-sm">
+              <p className="text-xs font-semibold text-[#A8A29E] uppercase tracking-widest mb-3">En Çok Beğenilen</p>
+              <Link href={`/post/${bestPost.id}`} className="flex items-center gap-4 group">
+                <div className="w-16 h-16 rounded-[14px] overflow-hidden shrink-0 border border-[#E8E4DC]">
+                  {bestPost.imageUrl ? (
+                    <Image src={bestPost.imageUrl} alt={bestPost.emotion} width={64} height={64} className="object-cover w-full h-full" />
+                  ) : (
+                    <div className="w-full h-full bg-[#F5F3EF] flex items-center justify-center text-2xl">🎨</div>
+                  )}
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="font-semibold text-[#1C1917] group-hover:underline truncate">{bestPost.emotion}</p>
+                  <p className="text-sm text-[#78716C] mt-0.5">
+                    ❤️ {bestPost.likesCount} beğeni · 💬 {bestPost.commentsCount} yorum
+                  </p>
+                  {bestPost.caption && (
+                    <p className="text-xs text-[#A8A29E] mt-0.5 truncate">{bestPost.caption}</p>
+                  )}
+                </div>
+                <span className="text-2xl shrink-0">🏆</span>
+              </Link>
+            </div>
+          )}
+
+          {/* Charts */}
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
             {bpmData.length > 1 && (
               <div className="bg-white border border-[#E8E4DC] rounded-[22px] p-5 sm:p-6 shadow-sm">
@@ -122,7 +189,9 @@ export default function StatsPage() {
                     <XAxis dataKey="index" tick={{ fontSize: 10, fill: "#A8A29E" }} axisLine={false} tickLine={false} />
                     <YAxis tick={{ fontSize: 10, fill: "#A8A29E" }} domain={[40, 180]} axisLine={false} tickLine={false} />
                     <Tooltip contentStyle={tooltipStyle} formatter={(v) => [`${v} BPM`, ""]} cursor={{ stroke: "#E8E4DC" }} />
-                    <Area type="monotone" dataKey="bpm" stroke="#D9723F" strokeWidth={2} fill="url(#bpmGrad)" dot={{ fill: "#D9723F", r: 3, strokeWidth: 0 }} activeDot={{ r: 5, fill: "#D9723F", strokeWidth: 2, stroke: "#fff" }} />
+                    <Area type="monotone" dataKey="bpm" stroke="#D9723F" strokeWidth={2} fill="url(#bpmGrad)"
+                      dot={{ fill: "#D9723F", r: 3, strokeWidth: 0 }}
+                      activeDot={{ r: 5, fill: "#D9723F", strokeWidth: 2, stroke: "#fff" }} />
                   </AreaChart>
                 </ResponsiveContainer>
               </div>
@@ -137,7 +206,9 @@ export default function StatsPage() {
                     <CartesianGrid strokeDasharray="0" stroke="#F5F3EF" vertical={false} />
                     <XAxis dataKey="emoji" tick={{ fontSize: 16 }} axisLine={false} tickLine={false} />
                     <YAxis tick={{ fontSize: 10, fill: "#A8A29E" }} allowDecimals={false} axisLine={false} tickLine={false} />
-                    <Tooltip contentStyle={tooltipStyle} formatter={(v, _, props) => [`${v} çizim`, (props as { payload?: EmotionStat }).payload?.label ?? ""]} cursor={{ fill: "#F5F3EF" }} />
+                    <Tooltip contentStyle={tooltipStyle}
+                      formatter={(v, _, props) => [`${v} çizim`, (props as { payload?: EmotionStat }).payload?.label ?? ""]}
+                      cursor={{ fill: "#F5F3EF" }} />
                     <Bar dataKey="count" radius={[8, 8, 0, 0]} fill="#D9723F" />
                   </BarChart>
                 </ResponsiveContainer>
@@ -150,16 +221,23 @@ export default function StatsPage() {
   )
 }
 
-function StatCard({ icon, label, value, accent }: { icon: string; label: string; value: string; accent: string }) {
+function StatCard({
+  icon, label, value, accent, highlight = false
+}: {
+  icon: string; label: string; value: string; accent: string; highlight?: boolean
+}) {
   return (
-    <div className="bg-white border border-[#E8E4DC] rounded-[18px] p-4 sm:p-5 shadow-sm">
+    <div
+      className="bg-white border rounded-[18px] p-4 sm:p-5 shadow-sm transition-all"
+      style={{ borderColor: highlight ? accent + "50" : "#E8E4DC" }}
+    >
       <div className="flex items-center gap-2.5 mb-2">
-        <div className="w-8 h-8 rounded-[10px] flex items-center justify-center text-sm" style={{ backgroundColor: accent + "15" }}>
+        <div className="w-8 h-8 rounded-[10px] flex items-center justify-center text-sm" style={{ backgroundColor: accent + "18" }}>
           {icon}
         </div>
         <span className="text-xs font-medium text-[#78716C]">{label}</span>
       </div>
-      <p className="text-xl sm:text-2xl font-bold text-[#1C1917]">{value}</p>
+      <p className="text-xl sm:text-2xl font-bold" style={{ color: highlight ? accent : "#1C1917" }}>{value}</p>
     </div>
   )
 }
