@@ -328,7 +328,7 @@ struct PostDetailView: View {
                 return String(trimmed[r]).lowercased()
             }
         }
-        var data: [String: Any] = ["caption": trimmed, "tags": tags]
+        let data: [String: Any] = ["caption": trimmed, "tags": tags]
         Firestore.firestore().collection("posts").document(post.id).updateData(data) { _ in
             isSavingCaption = false
             withAnimation { isEditingCaption = false }
