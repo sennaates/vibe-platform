@@ -9,13 +9,14 @@ import {
   onSnapshot, addDoc, serverTimestamp, updateDoc, increment, deleteDoc,
   setDoc
 } from "firebase/firestore"
-import { ArrowLeft, Send, Heart, Trash2, MoreHorizontal, MessageCircle } from "lucide-react"
+import { ArrowLeft, Send, Heart, Trash2, MoreHorizontal, MessageCircle, Link2, Pencil, X, Check } from "lucide-react"
 import { db } from "@/lib/firebase"
 import { useAuth } from "@/hooks/useAuth"
 import { Avatar } from "@/components/ui/Avatar"
 import { profileColors } from "@/lib/design"
 import { formatRelativeTime } from "@/lib/utils"
 import { createNotification } from "@/lib/notifications"
+import { toast } from "@/lib/toast"
 import type { Post, Comment } from "@/types"
 
 export default function PostDetailPage({ params }: { params: Promise<{ id: string }> }) {
@@ -27,10 +28,13 @@ export default function PostDetailPage({ params }: { params: Promise<{ id: strin
   const [comments, setComments]   = useState<Comment[]>([])
   const [text, setText]           = useState("")
   const [sending, setSending]     = useState(false)
-  const [deleting, setDeleting]   = useState(false)
-  const [showMenu, setShowMenu]   = useState(false)
-  const [liked, setLiked]         = useState(false)
-  const [likes, setLikes]         = useState(0)
+  const [deleting, setDeleting]     = useState(false)
+  const [showMenu, setShowMenu]     = useState(false)
+  const [liked, setLiked]           = useState(false)
+  const [likes, setLikes]           = useState(0)
+  const [editingCaption, setEditing] = useState(false)
+  const [captionDraft, setCaptionDraft] = useState("")
+  const [savingCaption, setSavingCaption] = useState(false)
   const bottomRef                 = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
@@ -88,6 +92,21 @@ export default function PostDetailPage({ params }: { params: Promise<{ id: strin
         })
       }
     }
+  }
+
+  function handleShare() {
+    const url = `${window.location.origin}/post/${id}`
+    navigator.clipboard.writeText(url).then(() => toast.success("Link kopyalandı!"))
+  }
+
+  async function saveCaption() {
+    if (!post) return
+    setSavingCaption(true)
+    await updateDoc(doc(db, "posts", id), { caption: captionDraft.trim() })
+    setPost(p => p ? { ...p, caption: captionDraft.trim() } : p)
+    setEditing(false)
+    setSavingCaption(false)
+    toast.success("Açıklama güncellendi")
   }
 
   async function handleDelete() {
@@ -189,7 +208,14 @@ export default function PostDetailPage({ params }: { params: Promise<{ id: strin
                     {showMenu && (
                       <>
                         <div className="fixed inset-0 z-10" onClick={() => setShowMenu(false)} />
-                        <div className="absolute right-0 top-8 z-20 bg-white border border-[#E8E4DC] rounded-[14px] shadow-lg py-1 min-w-[140px]">
+                        <div className="absolute right-0 top-8 z-20 bg-white border border-[#E8E4DC] rounded-[14px] shadow-lg py-1 min-w-[160px]">
+                          <button
+                            onClick={() => { setShowMenu(false); setCaptionDraft(post.caption ?? ""); setEditing(true) }}
+                            className="w-full flex items-center gap-2.5 px-4 py-2.5 text-sm font-medium text-[#1C1917] hover:bg-[#F5F3EF] transition-colors"
+                          >
+                            <Pencil size={14} />
+                            Açıklamayı Düzenle
+                          </button>
                           <button
                             onClick={() => { setShowMenu(false); handleDelete() }}
                             disabled={deleting}
@@ -217,7 +243,7 @@ export default function PostDetailPage({ params }: { params: Promise<{ id: strin
             </div>
 
             {/* Actions row */}
-            <div className="flex items-center gap-5 px-5 pt-3 pb-1">
+            <div className="flex items-center gap-4 px-5 pt-3 pb-1">
               <button
                 onClick={toggleLike}
                 className="flex items-center gap-1.5 text-sm font-medium transition-all active:scale-90"
@@ -230,12 +256,37 @@ export default function PostDetailPage({ params }: { params: Promise<{ id: strin
                 <MessageCircle size={20} />
                 <span>{comments.length}</span>
               </div>
+              <button
+                onClick={handleShare}
+                className="ml-auto flex items-center gap-1.5 text-sm font-medium text-[#A8A29E] hover:text-[#78716C] transition-colors"
+              >
+                <Link2 size={18} />
+                Paylaş
+              </button>
             </div>
 
-            {/* Caption */}
-            {post.caption && (
+            {/* Caption — editable for own posts */}
+            {editingCaption ? (
+              <div className="px-5 py-3 space-y-2">
+                <textarea
+                  value={captionDraft}
+                  onChange={e => setCaptionDraft(e.target.value)}
+                  rows={3}
+                  autoFocus
+                  className="w-full px-3 py-2 rounded-[12px] bg-[#FAF8F4] border border-[#E8E4DC] text-sm text-[#1C1917] focus:outline-none focus:ring-2 focus:ring-[#D9723F]/20 focus:border-[#D9723F] resize-none transition"
+                />
+                <div className="flex gap-2 justify-end">
+                  <button onClick={() => setEditing(false)} className="flex items-center gap-1 px-3 py-1.5 rounded-full text-xs font-semibold text-[#78716C] bg-[#F5F3EF]">
+                    <X size={12} /> İptal
+                  </button>
+                  <button onClick={saveCaption} disabled={savingCaption} className="flex items-center gap-1 px-3 py-1.5 rounded-full text-xs font-semibold text-white bg-[#D9723F] disabled:opacity-60">
+                    <Check size={12} /> {savingCaption ? "Kaydediliyor…" : "Kaydet"}
+                  </button>
+                </div>
+              </div>
+            ) : post.caption ? (
               <p className="px-5 py-3 text-sm text-[#1C1917] leading-relaxed">{post.caption}</p>
-            )}
+            ) : null}
           </div>
         </div>
 
