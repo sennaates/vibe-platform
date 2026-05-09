@@ -6,15 +6,17 @@ import Link from "next/link"
 import { useRouter } from "next/navigation"
 import {
   doc, getDoc, collection, query, orderBy,
-  onSnapshot, addDoc, serverTimestamp, updateDoc, increment, deleteDoc
+  onSnapshot, addDoc, serverTimestamp, updateDoc, increment, deleteDoc,
+  setDoc
 } from "firebase/firestore"
-import { ArrowLeft, Send, Heart, Trash2, MoreHorizontal } from "lucide-react"
+import { ArrowLeft, Send, Heart, Trash2, MoreHorizontal, MessageCircle, Link2, Pencil, X, Check } from "lucide-react"
 import { db } from "@/lib/firebase"
 import { useAuth } from "@/hooks/useAuth"
 import { Avatar } from "@/components/ui/Avatar"
 import { profileColors } from "@/lib/design"
 import { formatRelativeTime } from "@/lib/utils"
 import { createNotification } from "@/lib/notifications"
+import { toast } from "@/lib/toast"
 import type { Post, Comment } from "@/types"
 
 export default function PostDetailPage({ params }: { params: Promise<{ id: string }> }) {
@@ -26,15 +28,30 @@ export default function PostDetailPage({ params }: { params: Promise<{ id: strin
   const [comments, setComments]   = useState<Comment[]>([])
   const [text, setText]           = useState("")
   const [sending, setSending]     = useState(false)
-  const [deleting, setDeleting]   = useState(false)
-  const [showMenu, setShowMenu]   = useState(false)
+  const [deleting, setDeleting]     = useState(false)
+  const [showMenu, setShowMenu]     = useState(false)
+  const [liked, setLiked]           = useState(false)
+  const [likes, setLikes]           = useState(0)
+  const [editingCaption, setEditing] = useState(false)
+  const [captionDraft, setCaptionDraft] = useState("")
+  const [savingCaption, setSavingCaption] = useState(false)
   const bottomRef                 = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
     getDoc(doc(db, "posts", id)).then(snap => {
-      if (snap.exists()) setPost({ id: snap.id, ...snap.data() } as Post)
+      if (snap.exists()) {
+        const data = { id: snap.id, ...snap.data() } as Post
+        setPost(data)
+        setLikes(data.likesCount)
+      }
     })
   }, [id])
+
+  // Check if current user liked this post
+  useEffect(() => {
+    if (!user) return
+    getDoc(doc(db, "posts", id, "likes", user.uid)).then(snap => setLiked(snap.exists()))
+  }, [id, user])
 
   useEffect(() => {
     const q = query(collection(db, "posts", id, "comments"), orderBy("createdAt", "asc"))
@@ -44,6 +61,53 @@ export default function PostDetailPage({ params }: { params: Promise<{ id: strin
   }, [id])
 
   const isOwnPost = user?.uid === post?.userId
+
+  async function toggleLike() {
+    if (!user || !post) return
+    const likeRef     = doc(db, "posts", id, "likes", user.uid)
+    const postRef     = doc(db, "posts", id)
+    const userLikeRef = doc(db, "userLikes", user.uid, "items", id)
+    if (liked) {
+      await deleteDoc(likeRef)
+      await deleteDoc(userLikeRef)
+      await updateDoc(postRef, { likesCount: increment(-1) })
+      setLiked(false)
+      setLikes(l => l - 1)
+    } else {
+      await setDoc(likeRef, { userId: user.uid, createdAt: new Date() })
+      await setDoc(userLikeRef, { postId: id, likedAt: new Date() })
+      await updateDoc(postRef, { likesCount: increment(1) })
+      setLiked(true)
+      setLikes(l => l + 1)
+      if (profile) {
+        await createNotification({
+          targetUserId:   post.userId,
+          type:           "like",
+          fromUserId:     user.uid,
+          fromUserName:   profile.displayName,
+          fromUserAvatar: profile.avatarEmoji,
+          fromUserColor:  profile.profileColor,
+          postId:         id,
+          postImageUrl:   post.imageUrl,
+        })
+      }
+    }
+  }
+
+  function handleShare() {
+    const url = `${window.location.origin}/post/${id}`
+    navigator.clipboard.writeText(url).then(() => toast.success("Link kopyalandı!"))
+  }
+
+  async function saveCaption() {
+    if (!post) return
+    setSavingCaption(true)
+    await updateDoc(doc(db, "posts", id), { caption: captionDraft.trim() })
+    setPost(p => p ? { ...p, caption: captionDraft.trim() } : p)
+    setEditing(false)
+    setSavingCaption(false)
+    toast.success("Açıklama güncellendi")
+  }
 
   async function handleDelete() {
     if (!post || !user || !isOwnPost) return
@@ -144,7 +208,14 @@ export default function PostDetailPage({ params }: { params: Promise<{ id: strin
                     {showMenu && (
                       <>
                         <div className="fixed inset-0 z-10" onClick={() => setShowMenu(false)} />
-                        <div className="absolute right-0 top-8 z-20 bg-white border border-[#E8E4DC] rounded-[14px] shadow-lg py-1 min-w-[140px]">
+                        <div className="absolute right-0 top-8 z-20 bg-white border border-[#E8E4DC] rounded-[14px] shadow-lg py-1 min-w-[160px]">
+                          <button
+                            onClick={() => { setShowMenu(false); setCaptionDraft(post.caption ?? ""); setEditing(true) }}
+                            className="w-full flex items-center gap-2.5 px-4 py-2.5 text-sm font-medium text-[#1C1917] hover:bg-[#F5F3EF] transition-colors"
+                          >
+                            <Pencil size={14} />
+                            Açıklamayı Düzenle
+                          </button>
                           <button
                             onClick={() => { setShowMenu(false); handleDelete() }}
                             disabled={deleting}
@@ -171,10 +242,51 @@ export default function PostDetailPage({ params }: { params: Promise<{ id: strin
               )}
             </div>
 
-            {/* Caption */}
-            {post.caption && (
-              <p className="px-5 py-4 text-sm text-[#1C1917] leading-relaxed">{post.caption}</p>
-            )}
+            {/* Actions row */}
+            <div className="flex items-center gap-4 px-5 pt-3 pb-1">
+              <button
+                onClick={toggleLike}
+                className="flex items-center gap-1.5 text-sm font-medium transition-all active:scale-90"
+                style={{ color: liked ? "#e53e3e" : "#A8A29E" }}
+              >
+                <Heart size={20} className={liked ? "fill-red-500" : ""} />
+                <span>{likes}</span>
+              </button>
+              <div className="flex items-center gap-1.5 text-sm font-medium text-[#A8A29E]">
+                <MessageCircle size={20} />
+                <span>{comments.length}</span>
+              </div>
+              <button
+                onClick={handleShare}
+                className="ml-auto flex items-center gap-1.5 text-sm font-medium text-[#A8A29E] hover:text-[#78716C] transition-colors"
+              >
+                <Link2 size={18} />
+                Paylaş
+              </button>
+            </div>
+
+            {/* Caption — editable for own posts */}
+            {editingCaption ? (
+              <div className="px-5 py-3 space-y-2">
+                <textarea
+                  value={captionDraft}
+                  onChange={e => setCaptionDraft(e.target.value)}
+                  rows={3}
+                  autoFocus
+                  className="w-full px-3 py-2 rounded-[12px] bg-[#FAF8F4] border border-[#E8E4DC] text-sm text-[#1C1917] focus:outline-none focus:ring-2 focus:ring-[#D9723F]/20 focus:border-[#D9723F] resize-none transition"
+                />
+                <div className="flex gap-2 justify-end">
+                  <button onClick={() => setEditing(false)} className="flex items-center gap-1 px-3 py-1.5 rounded-full text-xs font-semibold text-[#78716C] bg-[#F5F3EF]">
+                    <X size={12} /> İptal
+                  </button>
+                  <button onClick={saveCaption} disabled={savingCaption} className="flex items-center gap-1 px-3 py-1.5 rounded-full text-xs font-semibold text-white bg-[#D9723F] disabled:opacity-60">
+                    <Check size={12} /> {savingCaption ? "Kaydediliyor…" : "Kaydet"}
+                  </button>
+                </div>
+              </div>
+            ) : post.caption ? (
+              <p className="px-5 py-3 text-sm text-[#1C1917] leading-relaxed">{post.caption}</p>
+            ) : null}
           </div>
         </div>
 
@@ -199,12 +311,24 @@ export default function PostDetailPage({ params }: { params: Promise<{ id: strin
                 </div>
               ) : (
                 comments.map(c => (
-                  <div key={c.id} className="flex gap-3 px-5 py-3.5">
+                  <div key={c.id} className="flex gap-3 px-5 py-3.5 group">
                     <Avatar emoji={c.userAvatar} color={c.userColor} size="sm" className="mt-0.5 shrink-0" />
-                    <div className="min-w-0">
+                    <div className="min-w-0 flex-1">
                       <div className="flex items-baseline gap-1.5">
                         <span className="text-xs font-semibold text-[#1C1917]">{c.userName}</span>
                         <span className="text-[10px] text-[#A8A29E]">{formatRelativeTime(c.createdAt)}</span>
+                        {/* Delete own comment */}
+                        {user?.uid === c.userId && (
+                          <button
+                            onClick={async () => {
+                              await deleteDoc(doc(db, "posts", id, "comments", c.id))
+                              await updateDoc(doc(db, "posts", id), { commentsCount: increment(-1) })
+                            }}
+                            className="ml-auto opacity-0 group-hover:opacity-100 transition-opacity p-1 rounded text-[#A8A29E] hover:text-red-400"
+                          >
+                            <Trash2 size={11} />
+                          </button>
+                        )}
                       </div>
                       <p className="text-sm text-[#1C1917] mt-0.5 leading-relaxed break-words">{c.text}</p>
                     </div>

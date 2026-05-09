@@ -2,7 +2,7 @@
 
 import Link from "next/link"
 import Image from "next/image"
-import { Heart, MessageCircle, MoreHorizontal, Trash2 } from "lucide-react"
+import { Heart, MessageCircle, MoreHorizontal, Trash2, Link2 } from "lucide-react"
 import { useState } from "react"
 import { doc, updateDoc, increment, setDoc, deleteDoc } from "firebase/firestore"
 import { db } from "@/lib/firebase"
@@ -11,6 +11,7 @@ import { Avatar } from "@/components/ui/Avatar"
 import { profileColors } from "@/lib/design"
 import { formatRelativeTime } from "@/lib/utils"
 import { createNotification } from "@/lib/notifications"
+import { toast } from "@/lib/toast"
 import type { Post } from "@/types"
 
 interface PostCardProps {
@@ -46,16 +47,19 @@ export function PostCard({ post, isLiked: initialLiked = false, onDeleted }: Pos
 
   async function toggleLike() {
     if (!user) return
-    const likeRef = doc(db, "posts", post.id, "likes", user.uid)
-    const postRef = doc(db, "posts", post.id)
+    const likeRef    = doc(db, "posts", post.id, "likes", user.uid)
+    const postRef    = doc(db, "posts", post.id)
+    const userLikeRef = doc(db, "userLikes", user.uid, "items", post.id)
 
     if (liked) {
       await deleteDoc(likeRef)
+      await deleteDoc(userLikeRef)
       await updateDoc(postRef, { likesCount: increment(-1) })
       setLiked(false)
       setLikes(l => l - 1)
     } else {
       await setDoc(likeRef, { userId: user.uid, createdAt: new Date() })
+      await setDoc(userLikeRef, { postId: post.id, likedAt: new Date() })
       await updateDoc(postRef, { likesCount: increment(1) })
       setLiked(true)
       setLikes(l => l + 1)
@@ -158,17 +162,14 @@ export function PostCard({ post, isLiked: initialLiked = false, onDeleted }: Pos
       </Link>
 
       {/* Actions row */}
-      <div className="flex items-center gap-5 px-5 py-3">
+      <div className="flex items-center gap-4 px-5 py-3">
         <button
           onClick={toggleLike}
           className="flex items-center gap-1.5 text-sm font-medium transition-all active:scale-90"
           style={{ color: liked ? "#e53e3e" : "#A8A29E" }}
           aria-label={liked ? "Beğeniyi kaldır" : "Beğen"}
         >
-          <Heart
-            size={19}
-            className={liked ? "fill-red-500" : ""}
-          />
+          <Heart size={19} className={liked ? "fill-red-500" : ""} />
           <span>{likes}</span>
         </button>
 
@@ -179,6 +180,17 @@ export function PostCard({ post, isLiked: initialLiked = false, onDeleted }: Pos
           <MessageCircle size={19} />
           <span>{post.commentsCount}</span>
         </Link>
+
+        <button
+          onClick={() => {
+            const url = `${window.location.origin}/post/${post.id}`
+            navigator.clipboard.writeText(url).then(() => toast.success("Link kopyalandı!"))
+          }}
+          className="ml-auto text-[#A8A29E] hover:text-[#78716C] transition-colors"
+          aria-label="Paylaş"
+        >
+          <Link2 size={18} />
+        </button>
       </div>
 
       {/* Caption */}
