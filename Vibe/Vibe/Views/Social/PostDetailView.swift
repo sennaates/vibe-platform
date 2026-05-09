@@ -42,10 +42,6 @@ struct PostDetailView: View {
                     onDelete: onDelete.map { del in { del(); dismiss() } },
                     onHashtagTap: { tag in hashtagNavTag = HashtagNavItem(tag: tag) }
                 )
-                .navigationDestination(item: $hashtagNavTag) { item in
-                    HashtagFeedView(tag: item.tag)
-                        .environmentObject(authService)
-                }
                 .padding(.horizontal, AppSpacing.md)
                 .padding(.top, AppSpacing.md)
 
@@ -147,6 +143,10 @@ struct PostDetailView: View {
         .scrollDismissesKeyboard(.interactively)
         .navigationTitle("Gönderi")
         .navigationBarTitleDisplayMode(.inline)
+        .navigationDestination(item: $hashtagNavTag) { item in
+            HashtagFeedView(tag: item.tag)
+                .environmentObject(authService)
+        }
         .safeAreaInset(edge: .bottom) {
             commentInputArea
         }
