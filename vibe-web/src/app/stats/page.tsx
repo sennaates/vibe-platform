@@ -60,10 +60,10 @@ export default function StatsPage() {
     return (
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 animate-pulse space-y-5">
         <div className="h-8 w-40 bg-[#E8E4DC] rounded-full" />
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4">
           {[...Array(8)].map((_, i) => <div key={i} className="h-28 bg-[#E8E4DC] rounded-[18px]" />)}
         </div>
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
           <div className="h-64 bg-[#E8E4DC] rounded-[18px]" />
           <div className="h-64 bg-[#E8E4DC] rounded-[18px]" />
         </div>
@@ -130,7 +130,7 @@ export default function StatsPage() {
       ) : (
         <>
           {/* Row 1: activity stats */}
-          <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4">
             <StatCard icon="🎨" label="Toplam Çizim"   value={posts.length.toString()}                        accent="#D9723F" />
             <StatCard icon="❤️" label="Alınan Beğeni"  value={totalLikes.toString()}                          accent="#e53e3e" />
             <StatCard icon="💬" label="Alınan Yorum"   value={totalComments.toString()}                       accent="#6366f1" />
@@ -138,7 +138,7 @@ export default function StatsPage() {
           </div>
 
           {/* Row 2: emotion & bpm stats */}
-          <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4">
             <StatCard icon="💡" label="Dominant Duygu"  value={dominant ? `${dominant.emoji} ${dominant.label}` : "—"} accent={dominant?.color ?? "#D9723F"} />
             <StatCard icon="💓" label="Ortalama BPM"   value={avgBpm.toString()}                              accent="#C45F8A" />
             <StatCard icon="⚡" label="BPM Aralığı"    value={`${minBpm}–${maxBpm}`}                          accent="#D9723F" />
@@ -172,13 +172,13 @@ export default function StatsPage() {
           )}
 
           {/* Charts */}
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
             {bpmData.length > 1 && (
               <div className="bg-white border border-[#E8E4DC] rounded-[22px] p-5 sm:p-6 shadow-sm">
                 <p className="text-xs font-semibold text-[#A8A29E] uppercase tracking-widest mb-0.5">Zaman Serisi</p>
                 <p className="text-base font-semibold text-[#1C1917] mb-5">BPM Geçmişi</p>
                 <ResponsiveContainer width="100%" height={220}>
-                  <AreaChart data={bpmData} margin={{ top: 4, right: 4, left: -20, bottom: 0 }}>
+                  <AreaChart data={bpmData} margin={{ top: 4, right: 4, left: -16, bottom: 0 }}>
                     <defs>
                       <linearGradient id="bpmGrad" x1="0" y1="0" x2="0" y2="1">
                         <stop offset="0%" stopColor="#D9723F" stopOpacity={0.25} />
@@ -202,7 +202,7 @@ export default function StatsPage() {
                 <p className="text-xs font-semibold text-[#A8A29E] uppercase tracking-widest mb-0.5">Dağılım</p>
                 <p className="text-base font-semibold text-[#1C1917] mb-5">Duygu Dağılımı</p>
                 <ResponsiveContainer width="100%" height={220}>
-                  <BarChart data={emotionData} margin={{ top: 4, right: 4, left: -20, bottom: 0 }}>
+                  <BarChart data={emotionData} margin={{ top: 4, right: 4, left: -16, bottom: 0 }}>
                     <CartesianGrid strokeDasharray="0" stroke="#F5F3EF" vertical={false} />
                     <XAxis dataKey="emoji" tick={{ fontSize: 16 }} axisLine={false} tickLine={false} />
                     <YAxis tick={{ fontSize: 10, fill: "#A8A29E" }} allowDecimals={false} axisLine={false} tickLine={false} />

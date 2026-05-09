@@ -101,17 +101,17 @@ export function SuggestedUsers() {
               <button
                 onClick={() => toggleFollow(u.uid)}
                 disabled={u.followLoading}
-                className="flex items-center gap-1 px-2.5 py-1 rounded-full text-[10px] font-semibold shrink-0 transition-all disabled:opacity-60"
+                className="flex items-center gap-1 px-3 py-1.5 min-h-[32px] rounded-full text-xs font-semibold shrink-0 transition-all disabled:opacity-60"
                 style={u.isFollowing
                   ? { backgroundColor: "#F5F3EF", color: "#78716C", border: "1px solid #E8E4DC" }
                   : { backgroundColor: accent + "18", color: accent, border: `1px solid ${accent}30` }
                 }
               >
                 {u.followLoading
-                  ? <Loader2 size={10} className="animate-spin" />
+                  ? <Loader2 size={11} className="animate-spin" />
                   : u.isFollowing
-                    ? <><UserCheck size={10} />Takipte</>
-                    : <><UserPlus size={10} />Takip</>
+                    ? <><UserCheck size={11} />Takipte</>
+                    : <><UserPlus size={11} />Takip</>
                 }
               </button>
             </div>

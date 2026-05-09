@@ -2,6 +2,7 @@ import SwiftUI
 
 struct FeedView: View {
     @EnvironmentObject var authService: AuthService
+    @Environment(\.horizontalSizeClass) private var sizeClass
     @StateObject private var feedService = FeedService.shared
     @State private var selectedTab = 1
     @State private var selectedPost: Post? = nil
@@ -40,8 +41,9 @@ struct FeedView: View {
                                         },
                                         onDelete: { deletePost(post) }
                                     )
-                                    .padding(.horizontal, AppSpacing.md)
-                                }
+                                    .padding(.horizontal, sizeClass == .regular ? AppSpacing.xxl : AppSpacing.md)
+                                    .frame(maxWidth: sizeClass == .regular ? 680 : .infinity)
+                                    .frame(maxWidth: .infinity)
                             }
                             .padding(.vertical, AppSpacing.md)
                         }

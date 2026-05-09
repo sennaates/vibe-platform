@@ -170,10 +170,10 @@ export default function PostDetailPage({ params }: { params: Promise<{ id: strin
       </Link>
 
       {/* Desktop: yan yana, mobile: üst üste */}
-      <div className="grid grid-cols-1 lg:grid-cols-5 gap-5 lg:gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-5 gap-5 md:gap-6">
         {/* Sol — çizim (3/5) */}
-        <div className="lg:col-span-3">
-          <div className="bg-white border border-[#E8E4DC] rounded-[22px] overflow-hidden shadow-sm sticky top-20">
+        <div className="md:col-span-3">
+          <div className="bg-white border border-[#E8E4DC] rounded-[22px] overflow-hidden shadow-sm md:sticky md:top-20">
             {/* Header */}
             <div className="flex items-center gap-3 px-5 pt-5 pb-3">
               <Link href={`/profile/${post.userId}`}>
@@ -291,8 +291,8 @@ export default function PostDetailPage({ params }: { params: Promise<{ id: strin
         </div>
 
         {/* Sağ — yorumlar (2/5) */}
-        <div className="lg:col-span-2">
-          <div className="bg-white border border-[#E8E4DC] rounded-[22px] overflow-hidden shadow-sm lg:sticky lg:top-20 flex flex-col lg:max-h-[calc(100vh-120px)]">
+        <div className="md:col-span-2">
+          <div className="bg-white border border-[#E8E4DC] rounded-[22px] overflow-hidden shadow-sm md:sticky md:top-20 flex flex-col md:max-h-[calc(100vh-100px)]">
             <div className="px-5 py-4 border-b border-[#E8E4DC] shrink-0">
               <h2 className="font-semibold text-[#1C1917]">
                 Yorumlar{" "}

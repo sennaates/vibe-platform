@@ -2,6 +2,7 @@ import SwiftUI
 
 struct SearchView: View {
     @EnvironmentObject var authService: AuthService
+    @Environment(\.horizontalSizeClass) private var sizeClass
     @State private var query       = ""
     @State private var results     = [SocialUser]()
     @State private var isSearching = false
@@ -84,7 +85,7 @@ struct SearchView: View {
                             )
                         }
                         .listRowBackground(AppColor.canvas)
-                        .listRowInsets(EdgeInsets(top: 6, leading: 20, bottom: 6, trailing: 20))
+                        .listRowInsets(EdgeInsets(top: 6, leading: sizeClass == .regular ? 32 : 20, bottom: 6, trailing: sizeClass == .regular ? 32 : 20))
                     }
                     .listStyle(.plain)
                     .background(AppColor.canvas)
@@ -175,14 +176,14 @@ private struct UserRow: View {
                         Text("Takipte")
                             .font(.system(size: 13, weight: .semibold))
                             .foregroundColor(AppColor.inkMuted)
-                            .frame(width: 80, height: 30)
+                            .frame(width: 88, height: 36)
                             .background(AppColor.surfaceMuted)
                             .clipShape(Capsule())
                     } else {
                         Text("Takip Et")
                             .font(.system(size: 13, weight: .semibold))
                             .foregroundColor(.white)
-                            .frame(width: 80, height: 30)
+                            .frame(width: 88, height: 36)
                             .background(AppColor.accent)
                             .clipShape(Capsule())
                     }

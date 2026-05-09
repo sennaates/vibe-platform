@@ -12,11 +12,12 @@ struct PublicProfileView: View {
     @State private var selectedPost: Post? = nil
     @State private var followLoading = false
 
-    private let columns = [
-        GridItem(.flexible(), spacing: 2),
-        GridItem(.flexible(), spacing: 2),
-        GridItem(.flexible(), spacing: 2)
-    ]
+    @Environment(\.horizontalSizeClass) private var sizeClass
+
+    private var columns: [GridItem] {
+        let count = sizeClass == .regular ? 4 : 3
+        return Array(repeating: GridItem(.flexible(), spacing: 2), count: count)
+    }
 
     var isOwnProfile: Bool { userId == authService.firebaseUser?.uid }
 
@@ -76,16 +77,16 @@ struct PublicProfileView: View {
                     startPoint: .topLeading,
                     endPoint: .bottomTrailing
                 )
-                .frame(height: 110)
+                .frame(height: sizeClass == .regular ? 160 : 110)
 
                 // Avatar
-                avatarView(emoji: user.avatarEmoji, color: user.profileColor.color, size: 82)
+                avatarView(emoji: user.avatarEmoji, color: user.profileColor.color, size: sizeClass == .regular ? 100 : 82)
                     .shadow(color: user.profileColor.color.opacity(0.4), radius: 10, y: 3)
                     .overlay(
                         Circle()
                             .strokeBorder(Color(UIColor.systemBackground), lineWidth: 3)
                     )
-                    .offset(y: 41)
+                    .offset(y: sizeClass == .regular ? 50 : 41)
             }
 
             // Bilgi alanı
@@ -93,15 +94,15 @@ struct PublicProfileView: View {
                 // İsim + bio
                 VStack(spacing: 5) {
                     Text(user.displayName)
-                        .font(.title3.weight(.bold))
-                        .padding(.top, 48) // avatar için boşluk
+                        .font(sizeClass == .regular ? .title2.weight(.bold) : .title3.weight(.bold))
+                        .padding(.top, sizeClass == .regular ? 58 : 48)
 
                     if !user.bio.isEmpty {
                         Text(user.bio)
                             .font(.subheadline)
                             .foregroundColor(.secondary)
                             .multilineTextAlignment(.center)
-                            .padding(.horizontal, 32)
+                            .padding(.horizontal, sizeClass == .regular ? 80 : 32)
                     }
                 }
 
@@ -115,12 +116,14 @@ struct PublicProfileView: View {
                 }
                 .background(Color(UIColor.secondarySystemBackground))
                 .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
-                .padding(.horizontal, 20)
+                .padding(.horizontal, sizeClass == .regular ? 60 : 20)
+                .frame(maxWidth: sizeClass == .regular ? 500 : .infinity)
 
                 // Takip butonu
                 if !isOwnProfile {
                     followButton(user: user)
-                        .padding(.horizontal, 20)
+                        .padding(.horizontal, sizeClass == .regular ? 60 : 20)
+                        .frame(maxWidth: sizeClass == .regular ? 500 : .infinity)
                 }
             }
             .padding(.bottom, 20)
@@ -211,10 +214,7 @@ struct PublicProfileView: View {
                                 }
                             }
                         }
-                        .frame(
-                            width: UIScreen.main.bounds.width / 3 - 1,
-                            height: UIScreen.main.bounds.width / 3 - 1
-                        )
+                        .aspectRatio(1, contentMode: .fill)
                         .clipped()
                         .contentShape(Rectangle())
                         .onTapGesture { selectedPost = post }

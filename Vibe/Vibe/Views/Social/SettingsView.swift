@@ -5,6 +5,7 @@ import FirebaseAuth
 struct SettingsView: View {
     @EnvironmentObject var authService: AuthService
     @Environment(\.dismiss) private var dismiss
+    @Environment(\.horizontalSizeClass) private var sizeClass
 
     // Bildirim prefs
     @State private var notifFollows   = true
@@ -79,6 +80,7 @@ struct SettingsView: View {
             }
             .scrollContentBackground(.hidden)
             .background(AppColor.canvas)
+            .frame(maxWidth: sizeClass == .regular ? 600 : .infinity)
             .navigationTitle("Ayarlar")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {

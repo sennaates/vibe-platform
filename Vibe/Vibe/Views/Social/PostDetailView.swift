@@ -106,15 +106,15 @@ struct PostDetailView: View {
     private var commentInput: some View {
         HStack(spacing: 10) {
             if let user = authService.socialUser {
-                avatarView(emoji: user.avatarEmoji, color: user.profileColor.color, size: 32)
+                avatarView(emoji: user.avatarEmoji, color: user.profileColor.color, size: 34)
             }
 
             TextField("Yorum yaz...", text: $newComment, axis: .vertical)
                 .focused($commentFocused)
-                .font(.system(size: 14))
-                .lineLimit(1...3)
-                .padding(.horizontal, 14)
-                .padding(.vertical, 9)
+                .font(.system(size: 15))
+                .lineLimit(1...4)
+                .padding(.horizontal, AppSpacing.md)
+                .padding(.vertical, AppSpacing.sm + 2)
                 .background(AppColor.surface)
                 .clipShape(Capsule())
                 .overlay(
@@ -127,7 +127,7 @@ struct PostDetailView: View {
 
             Button(action: submitComment) {
                 Image(systemName: "arrow.up.circle.fill")
-                    .font(.system(size: 28))
+                    .font(.system(size: 30))
                     .foregroundColor(
                         newComment.trimmingCharacters(in: .whitespaces).isEmpty
                         ? AppColor.inkMuted.opacity(0.4)
@@ -137,13 +137,15 @@ struct PostDetailView: View {
             .disabled(newComment.trimmingCharacters(in: .whitespaces).isEmpty)
         }
         .padding(.horizontal, AppSpacing.md)
-        .padding(.vertical, 10)
+        .padding(.vertical, AppSpacing.sm + 2)
+        .padding(.bottom, AppSpacing.xs)
         .background(
             AppColor.canvas
                 .overlay(
                     Rectangle().fill(AppColor.divider).frame(height: 0.5),
                     alignment: .top
                 )
+                .ignoresSafeArea(edges: .bottom)
         )
     }
 

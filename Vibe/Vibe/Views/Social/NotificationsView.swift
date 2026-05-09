@@ -27,7 +27,7 @@ struct NotificationsView: View {
                                 .listRowBackground(
                                     notif.read ? AppColor.canvas : AppColor.accent.opacity(0.06)
                                 )
-                                .listRowInsets(EdgeInsets(top: 6, leading: 16, bottom: 6, trailing: 16))
+                                .listRowInsets(EdgeInsets(top: 6, leading: 20, bottom: 6, trailing: 20))
                         }
                     }
                     .listStyle(.plain)
@@ -148,7 +148,7 @@ private struct NotifRow: View {
                         AppColor.surfaceMuted
                     }
                 }
-                .frame(width: 44, height: 44)
+                .frame(width: 50, height: 50)
                 .clipShape(RoundedRectangle(cornerRadius: AppRadius.sm, style: .continuous))
             }
         }

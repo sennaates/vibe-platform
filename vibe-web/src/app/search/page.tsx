@@ -113,7 +113,7 @@ export default function SearchPage() {
           {results.map(u => {
             const accent = profileColors[u.profileColor] ?? "#4A7FA5"
             return (
-              <div key={u.uid} className="flex items-center gap-3 px-5 py-3.5">
+              <div key={u.uid} className="flex items-center gap-3 px-4 sm:px-5 py-3 sm:py-4">
                 <Link href={`/profile/${u.uid}`} className="shrink-0">
                   <Avatar emoji={u.avatarEmoji} color={u.profileColor} size="md" />
                 </Link>
@@ -129,7 +129,7 @@ export default function SearchPage() {
                   <button
                     onClick={() => toggleFollow(u.uid)}
                     disabled={u.followLoading}
-                    className="flex items-center gap-1.5 px-4 py-1.5 rounded-full text-xs font-semibold shrink-0 transition-all active:scale-95 disabled:opacity-60"
+                    className="flex items-center gap-1.5 px-4 py-2 min-h-[40px] rounded-full text-xs font-semibold shrink-0 transition-all active:scale-95 disabled:opacity-60"
                     style={u.isFollowing
                       ? { backgroundColor: "#F5F3EF", color: "#78716C", border: "1px solid #E8E4DC" }
                       : { backgroundColor: accent, color: "#fff" }
@@ -138,8 +138,8 @@ export default function SearchPage() {
                     {u.followLoading
                       ? <Loader2 size={12} className="animate-spin" />
                       : u.isFollowing
-                        ? <><UserCheck size={12} />Takipte</>
-                        : <><UserPlus size={12} />Takip</>
+                        ? <><UserCheck size={13} />Takipte</>
+                        : <><UserPlus size={13} />Takip</>
                     }
                   </button>
                 )}

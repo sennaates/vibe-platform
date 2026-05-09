@@ -99,7 +99,7 @@ struct PostCard: View {
             .clipShape(Rectangle())
 
             // ── Beğeni + Yorum ─────────────────────────────────
-            HStack(spacing: 18) {
+            HStack(spacing: 4) {
                 likeButton
                 commentButton
                 Spacer()
@@ -112,12 +112,12 @@ struct PostCard: View {
                         .foregroundColor(post.emotion.color)
                 }
                 .padding(.horizontal, 10)
-                .padding(.vertical, 5)
+                .padding(.vertical, 6)
                 .background(post.emotion.color.opacity(0.10))
                 .clipShape(Capsule())
             }
-            .padding(.horizontal, 14)
-            .padding(.vertical, 10)
+            .padding(.horizontal, AppSpacing.md)
+            .padding(.vertical, AppSpacing.sm)
 
             // ── Açıklama ───────────────────────────────────────
             if !post.caption.isEmpty {
@@ -153,6 +153,8 @@ struct PostCard: View {
                     .foregroundColor(post.isLiked ? .red : .secondary)
                     .monospacedDigit()
             }
+            .padding(.vertical, AppSpacing.sm)
+            .padding(.horizontal, AppSpacing.sm)
             .contentShape(Rectangle())
         }
     }
@@ -170,6 +172,8 @@ struct PostCard: View {
                     .foregroundColor(.secondary)
                     .monospacedDigit()
             }
+            .padding(.vertical, AppSpacing.sm)
+            .padding(.horizontal, AppSpacing.sm)
             .contentShape(Rectangle())
         }
     }
