@@ -58,10 +58,30 @@ class SocialService: ObservableObject {
             text: text,
             createdAt: Date()
         )
-        commentRef.setData(comment.dict) { error in
+        commentRef.setData(comment.dict) { [weak self] error in
+            guard let self else { return }
             if error == nil {
                 self.db.collection("posts").document(postId)
                     .updateData(["commentCount": FieldValue.increment(Int64(1))])
+
+                // Yorum bildirimi — post sahibine gönder
+                self.db.collection("posts").document(postId).getDocument { snap, _ in
+                    guard let data = snap?.data(),
+                          let postOwnerId = data["userId"] as? String,
+                          let postImageUrl = data["imageURL"] as? String
+                    else { return }
+
+                    self.createNotification(
+                        targetUserId:   postOwnerId,
+                        type:           "comment",
+                        fromUserId:     user.id,
+                        fromUserName:   user.displayName,
+                        fromUserAvatar: user.avatarEmoji,
+                        fromUserColor:  user.profileColorRaw,
+                        postId:         postId,
+                        postImageUrl:   postImageUrl
+                    )
+                }
             }
             completion(error)
         }
