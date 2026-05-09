@@ -11,6 +11,7 @@ struct PublicProfileView: View {
     @State private var isLoading = true
     @State private var selectedPost: Post? = nil
     @State private var followLoading = false
+    @State private var hashtagNavTag: HashtagNavItem? = nil
 
     @Environment(\.horizontalSizeClass) private var sizeClass
 
@@ -42,6 +43,10 @@ struct PublicProfileView: View {
                     onDelete: isOwnProfile ? { deletePost(post) } : nil
                 )
                 .environmentObject(authService)
+                .navigationDestination(item: $hashtagNavTag) { item in
+                    HashtagFeedView(tag: item.tag)
+                        .environmentObject(authService)
+                }
             }
         }
         .onAppear { load() }

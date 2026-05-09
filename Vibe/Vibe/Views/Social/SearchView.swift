@@ -3,32 +3,42 @@ import SwiftUI
 struct SearchView: View {
     @EnvironmentObject var authService: AuthService
     @Environment(\.horizontalSizeClass) private var sizeClass
-    @State private var query       = ""
-    @State private var results     = [SocialUser]()
-    @State private var isSearching = false
-    @State private var followingIds = Set<String>()
-    @State private var followLoading = Set<String>()
+    @State private var query            = ""
+    @State private var results          = [SocialUser]()
+    @State private var isSearching      = false
+    @State private var followingIds     = Set<String>()
+    @State private var followLoading    = Set<String>()
+    @State private var trendingTags     = [(tag: String, count: Int)]()
+    @State private var hashtagNavTag    : HashtagNavItem? = nil
 
     private let social = SocialService.shared
+
+    // True when query begins with #
+    private var isHashtagSearch: Bool {
+        query.hasPrefix("#") && query.count > 1
+    }
 
     var body: some View {
         NavigationStack {
             VStack(spacing: 0) {
-                // Arama çubuğu
+                // ── Arama çubuğu ────────────────────────────────
                 HStack(spacing: 10) {
-                    Image(systemName: "magnifyingglass")
+                    Image(systemName: isHashtagSearch ? "number" : "magnifyingglass")
                         .font(.system(size: 15, weight: .medium))
-                        .foregroundColor(AppColor.inkMuted)
+                        .foregroundColor(isHashtagSearch ? AppColor.accent : AppColor.inkMuted)
 
-                    TextField("Kullanıcı ara...", text: $query)
+                    TextField("Kullanıcı veya #hashtag ara...", text: $query)
                         .font(.system(size: 16))
                         .autocorrectionDisabled()
                         .textInputAutocapitalization(.never)
                         .submitLabel(.search)
-                        .onSubmit { runSearch() }
+                        .onSubmit { handleSubmit() }
                         .onChange(of: query) { _, new in
-                            if new.isEmpty { results = [] }
-                            else { runSearch() }
+                            if new.isEmpty {
+                                results = []
+                            } else if !new.hasPrefix("#") {
+                                runSearch()
+                            }
                         }
 
                     if isSearching {
@@ -46,23 +56,39 @@ struct SearchView: View {
                 .clipShape(RoundedRectangle(cornerRadius: AppRadius.md, style: .continuous))
                 .overlay(
                     RoundedRectangle(cornerRadius: AppRadius.md, style: .continuous)
-                        .strokeBorder(AppColor.divider, lineWidth: 0.5)
+                        .strokeBorder(
+                            isHashtagSearch ? AppColor.accent.opacity(0.4) : AppColor.divider,
+                            lineWidth: isHashtagSearch ? 1 : 0.5
+                        )
                 )
                 .padding(.horizontal, AppSpacing.lg)
                 .padding(.vertical, AppSpacing.md)
+                .animation(.easeInOut(duration: 0.15), value: isHashtagSearch)
 
                 Divider().overlay(AppColor.divider)
 
-                // Sonuçlar
-                if results.isEmpty && query.isEmpty {
-                    EmptyStateView(
-                        icon: "person.2.magnifyingglass",
-                        title: "Kullanıcı Bul",
-                        message: "İsim yazarak arkadaşlarını ara ve takip et"
-                    )
-                    .padding(.top, 40)
-                    Spacer()
-                } else if results.isEmpty && !query.isEmpty && !isSearching {
+                // ── İçerik ──────────────────────────────────────
+                if isHashtagSearch {
+                    // Hashtag arama ipucu
+                    hashtagSearchHint
+
+                } else if query.isEmpty {
+                    // Boş durum: trend hashtagler + açıklama
+                    ScrollView {
+                        VStack(alignment: .leading, spacing: AppSpacing.xl) {
+                            if !trendingTags.isEmpty {
+                                trendingHashtagsSection
+                            }
+                            EmptyStateView(
+                                icon: "person.2.magnifyingglass",
+                                title: "Kullanıcı Bul",
+                                message: "İsim yazarak arkadaşlarını ara, ya da #hashtag ile gönderi bul"
+                            )
+                        }
+                        .padding(.top, AppSpacing.lg)
+                    }
+
+                } else if results.isEmpty && !isSearching {
                     EmptyStateView(
                         icon: "magnifyingglass",
                         title: "Sonuç bulunamadı",
@@ -70,6 +96,7 @@ struct SearchView: View {
                     )
                     .padding(.top, 40)
                     Spacer()
+
                 } else {
                     List(results) { user in
                         NavigationLink(destination:
@@ -85,7 +112,12 @@ struct SearchView: View {
                             )
                         }
                         .listRowBackground(AppColor.canvas)
-                        .listRowInsets(EdgeInsets(top: 6, leading: sizeClass == .regular ? 32 : 20, bottom: 6, trailing: sizeClass == .regular ? 32 : 20))
+                        .listRowInsets(EdgeInsets(
+                            top: 6,
+                            leading: sizeClass == .regular ? 32 : 20,
+                            bottom: 6,
+                            trailing: sizeClass == .regular ? 32 : 20
+                        ))
                     }
                     .listStyle(.plain)
                     .background(AppColor.canvas)
@@ -94,7 +126,104 @@ struct SearchView: View {
             .background(AppColor.canvas)
             .navigationTitle("Ara")
             .navigationBarTitleDisplayMode(.inline)
-            .onAppear { loadFollowingIds() }
+            .navigationDestination(item: $hashtagNavTag) { item in
+                HashtagFeedView(tag: item.tag)
+                    .environmentObject(authService)
+            }
+            .onAppear {
+                loadFollowingIds()
+                loadTrendingHashtags()
+            }
+        }
+    }
+
+    // MARK: - Hashtag ipucu satırı
+
+    private var hashtagSearchHint: some View {
+        VStack(spacing: AppSpacing.xl) {
+            Spacer().frame(height: AppSpacing.xl)
+            VStack(spacing: 12) {
+                Text("#")
+                    .font(.system(size: 44, weight: .bold))
+                    .foregroundColor(AppColor.accent)
+                Text("\(query.dropFirst()) ile ara")
+                    .font(.headline)
+                    .foregroundColor(AppColor.ink)
+                Text("Bu hashtag'e ait gönderileri görmek için ara tuşuna bas")
+                    .font(.subheadline)
+                    .foregroundColor(AppColor.inkMuted)
+                    .multilineTextAlignment(.center)
+                    .padding(.horizontal, AppSpacing.xl)
+            }
+            Button {
+                handleSubmit()
+            } label: {
+                Text("\(query) ara")
+                    .font(.system(size: 15, weight: .semibold))
+                    .foregroundColor(.white)
+                    .padding(.horizontal, AppSpacing.xxl)
+                    .padding(.vertical, 12)
+                    .background(AppColor.accent)
+                    .clipShape(Capsule())
+            }
+            Spacer()
+        }
+    }
+
+    // MARK: - Trend hashtagler
+
+    private var trendingHashtagsSection: some View {
+        VStack(alignment: .leading, spacing: AppSpacing.md) {
+            HStack(spacing: 6) {
+                Image(systemName: "chart.line.uptrend.xyaxis")
+                    .font(.system(size: 12, weight: .semibold))
+                    .foregroundColor(AppColor.accent)
+                Text("TREND HASHTAGLER")
+                    .font(.system(size: 11, weight: .semibold))
+                    .foregroundColor(AppColor.inkMuted)
+                    .kerning(0.8)
+            }
+            .padding(.horizontal, AppSpacing.lg)
+
+            ScrollView(.horizontal, showsIndicators: false) {
+                HStack(spacing: 10) {
+                    ForEach(trendingTags, id: \.tag) { item in
+                        Button {
+                            HapticManager.impact(.light)
+                            hashtagNavTag = HashtagNavItem(tag: item.tag)
+                        } label: {
+                            HStack(spacing: 4) {
+                                Text("#")
+                                    .font(.system(size: 13, weight: .bold))
+                                Text(item.tag)
+                                    .font(.system(size: 13, weight: .semibold))
+                                Text("\(item.count)")
+                                    .font(.system(size: 11))
+                                    .foregroundColor(AppColor.accent.opacity(0.6))
+                            }
+                            .foregroundColor(AppColor.accent)
+                            .padding(.horizontal, 14)
+                            .padding(.vertical, 9)
+                            .background(AppColor.accent.opacity(0.1))
+                            .clipShape(Capsule())
+                        }
+                        .buttonStyle(.plain)
+                    }
+                }
+                .padding(.horizontal, AppSpacing.lg)
+            }
+        }
+    }
+
+    // MARK: - Aksiyon
+
+    private func handleSubmit() {
+        let trimmed = query.trimmingCharacters(in: .whitespaces)
+        if trimmed.hasPrefix("#") && trimmed.count > 1 {
+            let tag = String(trimmed.dropFirst()).lowercased()
+            hashtagNavTag = HashtagNavItem(tag: tag)
+        } else {
+            runSearch()
         }
     }
 
@@ -113,6 +242,14 @@ struct SearchView: View {
         guard let uid = authService.firebaseUser?.uid else { return }
         social.fetchFollowingIds(userId: uid) { ids in
             followingIds = Set(ids)
+        }
+    }
+
+    private func loadTrendingHashtags() {
+        social.fetchTrendingHashtags { tags in
+            withAnimation {
+                trendingTags = tags
+            }
         }
     }
 
@@ -145,7 +282,6 @@ private struct UserRow: View {
 
     var body: some View {
         HStack(spacing: 12) {
-            // Avatar
             ZStack {
                 Circle()
                     .fill(user.profileColor.color.opacity(0.18))
@@ -154,7 +290,6 @@ private struct UserRow: View {
                     .font(.system(size: 22))
             }
 
-            // İsim + istatistik
             VStack(alignment: .leading, spacing: 2) {
                 Text(user.displayName)
                     .font(.system(size: 15, weight: .semibold))
@@ -166,7 +301,6 @@ private struct UserRow: View {
 
             Spacer()
 
-            // Takip butonu (kendi profili değilse)
             if !isOwn {
                 Button(action: onFollow) {
                     if isLoading {

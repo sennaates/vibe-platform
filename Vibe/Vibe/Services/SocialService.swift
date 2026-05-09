@@ -310,6 +310,25 @@ class SocialService: ObservableObject {
         }
     }
 
+    // MARK: - Trend Hashtagler
+    func fetchTrendingHashtags(completion: @escaping ([(tag: String, count: Int)]) -> Void) {
+        db.collection("posts")
+            .order(by: "createdAt", descending: true)
+            .limit(to: 200)
+            .getDocuments { snap, _ in
+                var map: [String: Int] = [:]
+                snap?.documents.forEach { d in
+                    let tags = d.data()["tags"] as? [String] ?? []
+                    tags.forEach { map[$0] = (map[$0] ?? 0) + 1 }
+                }
+                let sorted = map
+                    .sorted { $0.value > $1.value }
+                    .prefix(12)
+                    .map { (tag: $0.key, count: $0.value) }
+                completion(Array(sorted))
+            }
+    }
+
     // MARK: - Şikayet
     func reportPost(postId: String, reportedBy: String, completion: @escaping (Error?) -> Void) {
         db.collection("reports").addDocument(data: [

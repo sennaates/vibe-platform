@@ -60,6 +60,35 @@ struct FeedView: View {
                                     .frame(maxWidth: sizeClass == .regular ? 680 : .infinity)
                                     .frame(maxWidth: .infinity)
                             }
+
+                            // ── Sayfalama alt satırı ───────────────────
+                            if selectedTab == 1 { // yalnızca Keşfet sekmesinde
+                                Group {
+                                    if feedService.isLoadingMore {
+                                        ProgressView()
+                                            .tint(AppColor.accent)
+                                            .frame(maxWidth: .infinity)
+                                            .padding(.vertical, AppSpacing.lg)
+                                    } else if feedService.hasMoreDiscover {
+                                        Button {
+                                            let uid = authService.firebaseUser?.uid ?? ""
+                                            feedService.loadMoreDiscover(currentUserId: uid)
+                                        } label: {
+                                            Text("Daha Fazla Yükle")
+                                                .font(.system(size: 14, weight: .semibold))
+                                                .foregroundColor(AppColor.accent)
+                                                .frame(maxWidth: .infinity)
+                                                .padding(.vertical, AppSpacing.md)
+                                        }
+                                    } else {
+                                        Text("Tüm gönderiler yüklendi")
+                                            .font(.caption)
+                                            .foregroundColor(AppColor.inkSubtle)
+                                            .frame(maxWidth: .infinity)
+                                            .padding(.vertical, AppSpacing.lg)
+                                    }
+                                }
+                            }
                             .padding(.vertical, AppSpacing.md)
                         }
                     }
