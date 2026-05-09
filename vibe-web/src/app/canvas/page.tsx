@@ -9,7 +9,47 @@ import { db } from "@/lib/firebase"
 import { useAuth } from "@/hooks/useAuth"
 import { EmotionPicker, type BgType } from "@/components/canvas/EmotionPicker"
 import { DrawingCanvas } from "@/components/canvas/DrawingCanvas"
+import { toast } from "@/lib/toast"
 import type { EmotionState } from "@/lib/drawingEngine"
+
+const CLOUD_NAME    = process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME   ?? ""
+const UPLOAD_PRESET = process.env.NEXT_PUBLIC_CLOUDINARY_UPLOAD_PRESET ?? ""
+
+/** Cloudinary'ye yükle — başarısız olursa null döner */
+async function uploadToCloudinary(dataUrl: string): Promise<string | null> {
+  if (!CLOUD_NAME || !UPLOAD_PRESET) {
+    console.error("Cloudinary env vars eksik: NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME / NEXT_PUBLIC_CLOUDINARY_UPLOAD_PRESET")
+    return null
+  }
+  try {
+    const blob = await (await fetch(dataUrl)).blob()
+    const form = new FormData()
+    form.append("file", blob, "drawing.png")
+    form.append("upload_preset", UPLOAD_PRESET)
+    form.append("folder", "vibe")
+
+    const res = await fetch(
+      `https://api.cloudinary.com/v1_1/${CLOUD_NAME}/image/upload`,
+      { method: "POST", body: form }
+    )
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}))
+      console.error("Cloudinary yükleme hatası:", err)
+      return null
+    }
+    const data = await res.json()
+    return data.secure_url ?? null
+  } catch (e) {
+    console.error("Cloudinary bağlantı hatası:", e)
+    return null
+  }
+}
+
+/** caption'dan #hashtag'leri çıkar */
+function extractTags(caption: string): string[] {
+  const matches = caption.matchAll(/#([\wÀ-ɏЀ-ӿ]+)/g)
+  return [...matches].map(m => m[1].toLowerCase())
+}
 
 export default function CanvasPage() {
   const { user, profile } = useAuth()
@@ -33,48 +73,50 @@ export default function CanvasPage() {
     )
   }
 
+  /**
+   * DrawingCanvas'tan gelen composited dataUrl + caption ile Firestore'a kaydeder.
+   * dataUrl iki katmanı (overlay + drawing) zaten birleştirmiş halde gelir.
+   */
   async function handleSave(dataUrl: string, caption: string) {
     if (!user || !profile) return
 
-    // Cloudinary'ye yükle
-    const formData = new FormData()
-    const blob = await (await fetch(dataUrl)).blob()
-    formData.append("file", blob, "drawing.png")
-    formData.append("upload_preset", "vibe_drawings")
-    formData.append("folder", "vibe")
+    // 1. Cloudinary'ye yükle
+    const imageUrl = await uploadToCloudinary(dataUrl)
 
-    let imageUrl = ""
-    try {
-      const res = await fetch(
-        `https://api.cloudinary.com/v1_1/${process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME}/image/upload`,
-        { method: "POST", body: formData }
-      )
-      const data = await res.json()
-      imageUrl = data.secure_url ?? ""
-    } catch {
-      // Cloudinary yoksa dataUrl kullan (geçici)
-      imageUrl = dataUrl
+    if (!imageUrl) {
+      toast.error("Görsel yüklenemedi. Bağlantını kontrol et ve tekrar dene.")
+      return          // ← kaydetmiyoruz, kullanıcı retry yapabilir
     }
 
-    // Firestore'a kaydet
-    await addDoc(collection(db, "posts"), {
-      userId:        user.uid,
-      userName:      profile.displayName,
-      userAvatar:    profile.avatarEmoji,
-      userColor:     profile.profileColor,
-      imageUrl,
-      emotion:       emotion!.label + " " + emotion!.emoji,
-      bpm,
-      caption,
-      likesCount:    0,
-      commentsCount: 0,
-      createdAt:     serverTimestamp(),
-    })
+    // 2. Hashtag çıkar
+    const tags = extractTags(caption)
 
-    // postsCount artır
-    await updateDoc(doc(db, "users", user.uid), { postsCount: increment(1) })
+    // 3. Firestore'a kaydet
+    try {
+      await addDoc(collection(db, "posts"), {
+        userId:        user.uid,
+        userName:      profile.displayName,
+        userAvatar:    profile.avatarEmoji,
+        userColor:     profile.profileColor,
+        imageUrl,
+        emotion:       emotion!.label + " " + emotion!.emoji,
+        bpm,
+        caption:       caption.trim(),
+        ...(tags.length > 0 ? { tags } : {}),
+        likesCount:    0,
+        commentsCount: 0,
+        createdAt:     serverTimestamp(),
+      })
 
-    router.push("/")
+      // 4. postsCount artır
+      await updateDoc(doc(db, "users", user.uid), { postsCount: increment(1) })
+
+      toast.success("Çizim paylaşıldı! 🎉")
+      router.push("/")
+    } catch (e) {
+      console.error("Firestore kayıt hatası:", e)
+      toast.error("Gönderi kaydedilemedi. Tekrar dene.")
+    }
   }
 
   if (!emotion) {

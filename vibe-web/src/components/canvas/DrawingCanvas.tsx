@@ -156,10 +156,26 @@ export function DrawingCanvas({ emotion, bpm, bg, onSave, onDiscard }: DrawingCa
   }
 
   const handleSave = async () => {
-    const canvas = canvasRef.current
+    const canvas  = canvasRef.current
+    const overlay = overlayRef.current
     if (!canvas) return
     setSaving(true)
-    await onSave(canvas.toDataURL("image/png"), caption)
+
+    // Overlay (grid/çizgili arka plan) + çizim katmanını birleştir
+    let dataUrl: string
+    if (overlay) {
+      const merged = document.createElement("canvas")
+      merged.width  = canvas.width
+      merged.height = canvas.height
+      const mctx = merged.getContext("2d")!
+      mctx.drawImage(overlay, 0, 0)   // arka plan deseni
+      mctx.drawImage(canvas,  0, 0)   // çizimler
+      dataUrl = merged.toDataURL("image/png")
+    } else {
+      dataUrl = canvas.toDataURL("image/png")
+    }
+
+    await onSave(dataUrl, caption)
     setSaving(false)
     setShowSave(false)
   }
