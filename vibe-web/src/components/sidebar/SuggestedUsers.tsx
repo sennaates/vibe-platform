@@ -79,10 +79,10 @@ export function SuggestedUsers() {
   }
 
   return (
-    <div className="bg-white border border-[#E8E4DC] rounded-[22px] p-5 shadow-sm">
+    <div className="bg-surface border border-rim rounded-[22px] p-5 shadow-sm">
       <div className="flex items-center gap-2 mb-4">
-        <Users size={15} className="text-[#D9723F]" />
-        <p className="text-xs font-semibold text-[#A8A29E] uppercase tracking-widest">Tanıyor Olabilirsin</p>
+        <Users size={15} className="text-accent" />
+        <p className="text-xs font-semibold text-ink-subtle uppercase tracking-widest">Tanıyor Olabilirsin</p>
       </div>
       <div className="space-y-3">
         {suggestions.map(u => {
@@ -93,10 +93,10 @@ export function SuggestedUsers() {
                 <Avatar emoji={u.avatarEmoji} color={u.profileColor} size="sm" />
               </Link>
               <div className="flex-1 min-w-0">
-                <Link href={`/profile/${u.uid}`} className="text-xs font-semibold text-[#1C1917] hover:underline truncate block">
+                <Link href={`/profile/${u.uid}`} className="text-xs font-semibold text-ink hover:underline truncate block">
                   {u.displayName}
                 </Link>
-                <p className="text-[10px] text-[#A8A29E]">{u.postsCount} çizim</p>
+                <p className="text-[10px] text-ink-subtle">{u.postsCount} çizim</p>
               </div>
               <button
                 onClick={() => toggleFollow(u.uid)}
@@ -118,7 +118,7 @@ export function SuggestedUsers() {
           )
         })}
       </div>
-      <Link href="/search" className="block mt-4 text-center text-xs text-[#D9723F] hover:underline font-medium">
+      <Link href="/search" className="block mt-4 text-center text-xs text-accent hover:underline font-medium">
         Daha fazla kullanıcı bul →
       </Link>
     </div>

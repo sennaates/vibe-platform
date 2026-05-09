@@ -29,6 +29,7 @@ export interface Post {
   emotion: string
   bpm: number
   caption: string
+  tags?: string[]
   likesCount: number
   commentsCount: number
   createdAt: Timestamp

@@ -70,8 +70,19 @@ struct Post: Identifiable, Hashable {
         ProfileColor(rawValue: userProfileColorRaw) ?? .blue
     }
 
+    /// Extracts lowercase hashtag strings from caption (e.g. "#mutlu" → ["mutlu"])
+    var extractedTags: [String] {
+        let pattern = #"#([\wÀ-ɏЀ-ӿ]+)"#
+        guard let regex = try? NSRegularExpression(pattern: pattern) else { return [] }
+        let range = NSRange(caption.startIndex..., in: caption)
+        return regex.matches(in: caption, range: range).compactMap { match in
+            guard let r = Range(match.range(at: 1), in: caption) else { return nil }
+            return String(caption[r]).lowercased()
+        }
+    }
+
     var dict: [String: Any] {
-        [
+        var d: [String: Any] = [
             "userId": userId,
             "userDisplayName": userDisplayName,
             "userAvatarEmoji": userAvatarEmoji,
@@ -83,6 +94,9 @@ struct Post: Identifiable, Hashable {
             "commentCount": commentCount,
             "createdAt": createdAt
         ]
+        let tags = extractedTags
+        if !tags.isEmpty { d["tags"] = tags }
+        return d
     }
 
     static func from(_ dict: [String: Any], id: String) -> Post? {

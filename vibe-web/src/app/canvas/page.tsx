@@ -22,10 +22,10 @@ export default function CanvasPage() {
     return (
       <div className="flex flex-col items-center justify-center min-h-[calc(100vh-56px)] gap-4">
         <span className="text-4xl">🎨</span>
-        <p className="text-[#1C1917] font-semibold">Çizmek için giriş yap</p>
+        <p className="text-ink font-semibold">Çizmek için giriş yap</p>
         <button
           onClick={() => router.push("/auth")}
-          className="px-4 py-2 bg-[#D9723F] text-white rounded-[14px] text-sm font-medium"
+          className="px-4 py-2 bg-accent text-white rounded-[14px] text-sm font-medium"
         >
           Giriş Yap
         </button>

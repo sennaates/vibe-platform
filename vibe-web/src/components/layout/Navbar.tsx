@@ -3,8 +3,9 @@
 import Link from "next/link"
 import Image from "next/image"
 import { usePathname } from "next/navigation"
-import { Home, ImageIcon, BarChart2, PenLine, Search, Bell, Settings } from "lucide-react"
+import { Home, ImageIcon, BarChart2, PenLine, Search, Bell, Settings, Sun, Moon } from "lucide-react"
 import { useEffect, useState } from "react"
+import { useTheme } from "next-themes"
 import { collection, query, where, onSnapshot } from "firebase/firestore"
 import { db } from "@/lib/firebase"
 import { useAuth } from "@/hooks/useAuth"
@@ -15,6 +16,9 @@ export function Navbar() {
   const { user, profile } = useAuth()
   const pathname = usePathname()
   const [unread, setUnread] = useState(0)
+  const { resolvedTheme, setTheme } = useTheme()
+  const [mounted, setMounted] = useState(false)
+  useEffect(() => setMounted(true), [])
 
   // Subscribe to unread notification count
   useEffect(() => {
@@ -28,18 +32,18 @@ export function Navbar() {
   }, [user])
 
   return (
-    <header className="sticky top-0 z-50 bg-[#FAF8F4]/90 backdrop-blur-md border-b border-[#E8E4DC]">
+    <header className="sticky top-0 z-50 bg-canvas/90 backdrop-blur-md border-b border-rim">
       <div className="w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-14 flex items-center justify-between">
         {/* Logo */}
         <Link href="/" className="flex items-center gap-2.5 group">
           <div className="w-8 h-8 rounded-lg overflow-hidden shadow-sm group-hover:shadow transition-shadow">
             <Image src="/logo.png" alt="Vibe" width={32} height={32} />
           </div>
-          <span className="font-bold text-[#1C1917] text-base tracking-tight">Vibe</span>
+          <span className="font-bold text-ink text-base tracking-tight">Vibe</span>
         </Link>
 
         {/* Center nav — hidden on mobile, shown on lg+ */}
-        <nav className="hidden lg:flex items-center gap-1 bg-white/60 backdrop-blur rounded-full border border-[#E8E4DC]/60 px-1.5 py-1">
+        <nav className="hidden lg:flex items-center gap-1 bg-surface/60 backdrop-blur rounded-full border border-rim/60 px-1.5 py-1">
           <NavLink href="/" active={pathname === "/"} label="Akış">
             <Home size={17} strokeWidth={pathname === "/" ? 2.5 : 1.75} />
             <span className="text-[13px]">Akış</span>
@@ -96,11 +100,25 @@ export function Navbar() {
                 <Bell size={18} strokeWidth={pathname === "/notifications" ? 2.5 : 1.75} />
               </NavIconLink>
               {unread > 0 && (
-                <span className="absolute top-0.5 right-0.5 min-w-[16px] h-4 px-0.5 bg-[#D9723F] text-white text-[9px] font-bold rounded-full flex items-center justify-center pointer-events-none">
+                <span className="absolute top-0.5 right-0.5 min-w-[16px] h-4 px-0.5 bg-accent text-white text-[9px] font-bold rounded-full flex items-center justify-center pointer-events-none">
                   {unread > 9 ? "9+" : unread}
                 </span>
               )}
             </div>
+          )}
+
+          {/* Dark mode toggle */}
+          {mounted && (
+            <button
+              onClick={() => setTheme(resolvedTheme === "dark" ? "light" : "dark")}
+              className="p-2 rounded-[10px] transition-all duration-150 text-ink-subtle hover:bg-surface-muted hover:text-ink-muted"
+              aria-label="Tema değiştir"
+            >
+              {resolvedTheme === "dark"
+                ? <Sun size={18} strokeWidth={1.75} />
+                : <Moon size={18} strokeWidth={1.75} />
+              }
+            </button>
           )}
 
           {/* Settings */}
@@ -117,8 +135,8 @@ export function Navbar() {
               className={cn(
                 "ml-1 p-1 rounded-full transition-all",
                 pathname.startsWith("/profile")
-                  ? "ring-2 ring-[#D9723F] ring-offset-1"
-                  : "hover:ring-2 hover:ring-[#E8E4DC] hover:ring-offset-1"
+                  ? "ring-2 ring-accent ring-offset-1"
+                  : "hover:ring-2 hover:ring-rim hover:ring-offset-1"
               )}
             >
               <Avatar emoji={profile.avatarEmoji} color={profile.profileColor} size="sm" />
@@ -126,7 +144,7 @@ export function Navbar() {
           ) : !user ? (
             <Link
               href="/auth"
-              className="ml-1 px-4 py-1.5 bg-[#D9723F] text-white text-sm font-semibold rounded-full hover:bg-[#C4622F] transition-colors"
+              className="ml-1 px-4 py-1.5 bg-accent text-white text-sm font-semibold rounded-full hover:bg-accent-hover transition-colors"
             >
               Giriş
             </Link>
@@ -149,8 +167,8 @@ function NavLink({
       className={cn(
         "flex items-center gap-1.5 px-3 py-1.5 rounded-full transition-all duration-150 font-medium",
         active
-          ? "bg-[#D9723F]/12 text-[#D9723F]"
-          : "text-[#78716C] hover:bg-[#F5F3EF] hover:text-[#1C1917]"
+          ? "bg-accent/12 text-accent"
+          : "text-ink-muted hover:bg-surface-muted hover:text-ink"
       )}
     >
       {children}
@@ -169,8 +187,8 @@ function NavIconLink({
       className={cn(
         "p-2 rounded-[10px] transition-all duration-150",
         active
-          ? "bg-[#D9723F]/12 text-[#D9723F]"
-          : "text-[#A8A29E] hover:bg-[#F5F3EF] hover:text-[#78716C]"
+          ? "bg-accent/12 text-accent"
+          : "text-ink-subtle hover:bg-surface-muted hover:text-ink-muted"
       )}
     >
       {children}

@@ -1,14 +1,45 @@
 @import "tailwindcss";
 
+/* Dark mode class variant for Tailwind v4 */
+@custom-variant dark (&:where(.dark, .dark *));
+
+/* Semantic design tokens → Tailwind utility classes */
+@theme {
+  --color-canvas:       var(--canvas);
+  --color-surface:      var(--surface);
+  --color-surface-muted:var(--surface-muted);
+  --color-rim:          var(--rim);
+  --color-accent:       var(--accent);
+  --color-accent-hover: var(--accent-hover);
+  --color-ink:          var(--ink);
+  --color-ink-muted:    var(--ink-muted);
+  --color-ink-subtle:   var(--ink-subtle);
+}
+
+/* ─── Light mode ───────────────────────────────── */
 :root {
-  --canvas:       #FAF8F4;
-  --surface:      #FFFFFF;
-  --surface-muted:#F5F3EF;
-  --divider:      #E8E4DC;
-  --accent:       #D9723F;
-  --ink:          #1C1917;
-  --ink-muted:    #78716C;
-  --ink-subtle:   #A8A29E;
+  --canvas:        #FAF8F4;
+  --surface:       #FFFFFF;
+  --surface-muted: #F5F3EF;
+  --rim:           #E8E4DC;
+  --accent:        #D9723F;
+  --accent-hover:  #C4622F;
+  --ink:           #1C1917;
+  --ink-muted:     #78716C;
+  --ink-subtle:    #A8A29E;
+}
+
+/* ─── Dark mode ────────────────────────────────── */
+.dark {
+  --canvas:        #111010;
+  --surface:       #1C1A18;
+  --surface-muted: #252320;
+  --rim:           #2E2B27;
+  --accent:        #E07840;
+  --accent-hover:  #D9723F;
+  --ink:           #F0EDE8;
+  --ink-muted:     #A8A29E;
+  --ink-subtle:    #78716C;
 }
 
 * {
@@ -23,4 +54,4 @@ body {
 /* Scrollbar */
 ::-webkit-scrollbar { width: 6px; }
 ::-webkit-scrollbar-track { background: transparent; }
-::-webkit-scrollbar-thumb { background: var(--divider); border-radius: 99px; }
+::-webkit-scrollbar-thumb { background: var(--rim); border-radius: 99px; }

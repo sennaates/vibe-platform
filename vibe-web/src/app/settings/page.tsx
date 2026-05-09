@@ -26,8 +26,8 @@ import { Avatar } from "@/components/ui/Avatar"
 function Section({ title, children }: { title: string; children: React.ReactNode }) {
   return (
     <div>
-      <p className="text-xs font-semibold text-[#A8A29E] uppercase tracking-widest px-1 mb-2">{title}</p>
-      <div className="bg-white border border-[#E8E4DC] rounded-[18px] shadow-sm overflow-hidden divide-y divide-[#F5F3EF]">
+      <p className="text-xs font-semibold text-ink-subtle uppercase tracking-widest px-1 mb-2">{title}</p>
+      <div className="bg-surface border border-rim rounded-[18px] shadow-sm overflow-hidden divide-y divide-surface-muted">
         {children}
       </div>
     </div>
@@ -38,13 +38,13 @@ function SettingRow({ icon, label, sublabel, onClick, danger = false, children }
   icon: React.ReactNode; label: string; sublabel?: string
   onClick?: () => void; danger?: boolean; children?: React.ReactNode
 }) {
-  const cls = `flex items-center gap-3.5 px-5 py-4 w-full text-left transition-colors ${onClick ? "hover:bg-[#FAF8F4] cursor-pointer" : ""}`
+  const cls = `flex items-center gap-3.5 px-5 py-4 w-full text-left transition-colors ${onClick ? "hover:bg-canvas cursor-pointer" : ""}`
   const inner = (
     <>
-      <span className={`shrink-0 ${danger ? "text-red-400" : "text-[#78716C]"}`}>{icon}</span>
+      <span className={`shrink-0 ${danger ? "text-red-400" : "text-ink-muted"}`}>{icon}</span>
       <div className="flex-1 min-w-0">
-        <p className={`text-sm font-medium ${danger ? "text-red-500" : "text-[#1C1917]"}`}>{label}</p>
-        {sublabel && <p className="text-xs text-[#A8A29E] mt-0.5">{sublabel}</p>}
+        <p className={`text-sm font-medium ${danger ? "text-red-500" : "text-ink"}`}>{label}</p>
+        {sublabel && <p className="text-xs text-ink-subtle mt-0.5">{sublabel}</p>}
       </div>
       {children}
       {onClick && !children && <ChevronRight size={16} className="text-[#C8C0B4] shrink-0" />}
@@ -59,9 +59,9 @@ function Toggle({ value, onChange }: { value: boolean; onChange: (v: boolean) =>
   return (
     <button
       onClick={() => onChange(!value)}
-      className={`relative w-11 h-6 rounded-full transition-colors duration-200 shrink-0 ${value ? "bg-[#D9723F]" : "bg-[#E8E4DC]"}`}
+      className={`relative w-11 h-6 rounded-full transition-colors duration-200 shrink-0 ${value ? "bg-accent" : "bg-rim"}`}
     >
-      <span className={`absolute top-1 w-4 h-4 bg-white rounded-full shadow transition-transform duration-200 ${value ? "translate-x-6" : "translate-x-1"}`} />
+      <span className={`absolute top-1 w-4 h-4 bg-surface rounded-full shadow transition-transform duration-200 ${value ? "translate-x-6" : "translate-x-1"}`} />
     </button>
   )
 }
@@ -72,18 +72,18 @@ function PasswordInput({ label, value, onChange, show, onToggleShow }: {
 }) {
   return (
     <div>
-      <label className="block text-xs font-medium text-[#78716C] mb-1.5">{label}</label>
+      <label className="block text-xs font-medium text-ink-muted mb-1.5">{label}</label>
       <div className="relative">
         <input
           type={show ? "text" : "password"}
           value={value}
           onChange={e => onChange(e.target.value)}
-          className="w-full px-4 py-2.5 pr-10 rounded-[12px] bg-[#FAF8F4] border border-[#E8E4DC] text-sm text-[#1C1917] focus:outline-none focus:ring-2 focus:ring-[#D9723F]/20 focus:border-[#D9723F] transition"
+          className="w-full px-4 py-2.5 pr-10 rounded-[12px] bg-canvas border border-rim text-sm text-ink focus:outline-none focus:ring-2 focus:ring-accent/20 focus:border-accent transition"
         />
         <button
           type="button"
           onClick={onToggleShow}
-          className="absolute right-3 top-1/2 -translate-y-1/2 text-[#A8A29E] hover:text-[#78716C]"
+          className="absolute right-3 top-1/2 -translate-y-1/2 text-ink-subtle hover:text-ink-muted"
         >
           {show ? <EyeOff size={15} /> : <Eye size={15} />}
         </button>
@@ -99,10 +99,10 @@ function Modal({ title, onClose, children }: {
 }) {
   return (
     <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-4 bg-black/40 backdrop-blur-sm">
-      <div className="bg-white rounded-[22px] w-full max-w-sm shadow-xl">
-        <div className="flex items-center justify-between px-6 pt-5 pb-4 border-b border-[#E8E4DC]">
-          <h2 className="font-bold text-[#1C1917]">{title}</h2>
-          <button onClick={onClose} className="p-1.5 rounded-[8px] text-[#A8A29E] hover:bg-[#F5F3EF]">
+      <div className="bg-surface rounded-[22px] w-full max-w-sm shadow-xl">
+        <div className="flex items-center justify-between px-6 pt-5 pb-4 border-b border-rim">
+          <h2 className="font-bold text-ink">{title}</h2>
+          <button onClick={onClose} className="p-1.5 rounded-[8px] text-ink-subtle hover:bg-surface-muted">
             <X size={17} />
           </button>
         </div>
@@ -241,7 +241,7 @@ export default function SettingsPage() {
     return (
       <div className="max-w-lg mx-auto px-4 py-8 space-y-4 animate-pulse">
         {[...Array(4)].map((_, i) => (
-          <div key={i} className="h-24 bg-[#E8E4DC] rounded-[18px]" />
+          <div key={i} className="h-24 bg-rim rounded-[18px]" />
         ))}
       </div>
     )
@@ -250,20 +250,20 @@ export default function SettingsPage() {
   return (
     <div className="max-w-lg mx-auto px-4 py-6 sm:py-10 space-y-6">
       <div>
-        <p className="text-xs font-semibold text-[#A8A29E] uppercase tracking-widest mb-0.5">Tercihler</p>
-        <h1 className="text-2xl font-bold text-[#1C1917]">Ayarlar</h1>
+        <p className="text-xs font-semibold text-ink-subtle uppercase tracking-widest mb-0.5">Tercihler</p>
+        <h1 className="text-2xl font-bold text-ink">Ayarlar</h1>
       </div>
 
       {/* Profile preview */}
-      <div className="bg-white border border-[#E8E4DC] rounded-[18px] p-4 shadow-sm flex items-center gap-4">
+      <div className="bg-surface border border-rim rounded-[18px] p-4 shadow-sm flex items-center gap-4">
         <Avatar emoji={profile.avatarEmoji} color={profile.profileColor} size="lg" />
         <div className="flex-1 min-w-0">
-          <p className="font-semibold text-[#1C1917] truncate">{profile.displayName}</p>
-          <p className="text-xs text-[#A8A29E] truncate">{profile.email}</p>
+          <p className="font-semibold text-ink truncate">{profile.displayName}</p>
+          <p className="text-xs text-ink-subtle truncate">{profile.email}</p>
         </div>
         <Link
           href="/profile/edit"
-          className="flex items-center gap-1.5 px-3 py-1.5 bg-[#F5F3EF] text-[#78716C] rounded-full text-xs font-semibold hover:bg-[#EDE9E3] transition-colors"
+          className="flex items-center gap-1.5 px-3 py-1.5 bg-surface-muted text-ink-muted rounded-full text-xs font-semibold hover:bg-[#EDE9E3] transition-colors"
         >
           <Pencil size={12} /> Düzenle
         </Link>
@@ -359,10 +359,10 @@ export default function SettingsPage() {
           <PasswordInput label="Yeni Şifre" value={newPass} onChange={setNewPass} show={showPass} onToggleShow={() => setShowPass(s => !s)} />
           <PasswordInput label="Yeni Şifre (Tekrar)" value={confirmPass} onChange={setConfirmPass} show={showPass} onToggleShow={() => setShowPass(s => !s)} />
           <div className="flex gap-2 pt-1">
-            <button onClick={() => setModal(null)} className="flex-1 py-2.5 rounded-[12px] text-sm font-semibold text-[#78716C] bg-[#F5F3EF]">
+            <button onClick={() => setModal(null)} className="flex-1 py-2.5 rounded-[12px] text-sm font-semibold text-ink-muted bg-surface-muted">
               İptal
             </button>
-            <button onClick={handleChangePassword} disabled={passLoading} className="flex-1 py-2.5 rounded-[12px] text-sm font-semibold text-white bg-[#D9723F] disabled:opacity-60 flex items-center justify-center gap-1.5">
+            <button onClick={handleChangePassword} disabled={passLoading} className="flex-1 py-2.5 rounded-[12px] text-sm font-semibold text-white bg-accent disabled:opacity-60 flex items-center justify-center gap-1.5">
               {passLoading ? "Kaydediliyor…" : <><Check size={14} /> Kaydet</>}
             </button>
           </div>
@@ -372,18 +372,18 @@ export default function SettingsPage() {
       {modal === "email" && (
         <Modal title="E-posta Değiştir" onClose={() => setModal(null)}>
           <div>
-            <label className="block text-xs font-medium text-[#78716C] mb-1.5">Yeni E-posta</label>
+            <label className="block text-xs font-medium text-ink-muted mb-1.5">Yeni E-posta</label>
             <input
               type="email" value={newEmail} onChange={e => setNewEmail(e.target.value)}
-              className="w-full px-4 py-2.5 rounded-[12px] bg-[#FAF8F4] border border-[#E8E4DC] text-sm text-[#1C1917] focus:outline-none focus:ring-2 focus:ring-[#D9723F]/20 focus:border-[#D9723F] transition"
+              className="w-full px-4 py-2.5 rounded-[12px] bg-canvas border border-rim text-sm text-ink focus:outline-none focus:ring-2 focus:ring-accent/20 focus:border-accent transition"
             />
           </div>
           <PasswordInput label="Mevcut Şifre (Doğrulama)" value={emailPass} onChange={setEmailPass} show={showEPass} onToggleShow={() => setShowEPass(s => !s)} />
           <div className="flex gap-2 pt-1">
-            <button onClick={() => setModal(null)} className="flex-1 py-2.5 rounded-[12px] text-sm font-semibold text-[#78716C] bg-[#F5F3EF]">
+            <button onClick={() => setModal(null)} className="flex-1 py-2.5 rounded-[12px] text-sm font-semibold text-ink-muted bg-surface-muted">
               İptal
             </button>
-            <button onClick={handleChangeEmail} disabled={emailLoading} className="flex-1 py-2.5 rounded-[12px] text-sm font-semibold text-white bg-[#D9723F] disabled:opacity-60 flex items-center justify-center gap-1.5">
+            <button onClick={handleChangeEmail} disabled={emailLoading} className="flex-1 py-2.5 rounded-[12px] text-sm font-semibold text-white bg-accent disabled:opacity-60 flex items-center justify-center gap-1.5">
               {emailLoading ? "Güncelleniyor…" : <><Check size={14} /> Güncelle</>}
             </button>
           </div>
@@ -400,17 +400,17 @@ export default function SettingsPage() {
           </div>
           <PasswordInput label="Şifren" value={deletePass} onChange={setDeletePass} show={showDeletePass} onToggleShow={() => setShowDeletePass(s => !s)} />
           <div>
-            <label className="block text-xs font-medium text-[#78716C] mb-1.5">
+            <label className="block text-xs font-medium text-ink-muted mb-1.5">
               Onaylamak için <span className="font-bold text-red-500">SİL</span> yaz
             </label>
             <input
               type="text" value={deleteConfirm} onChange={e => setDeleteConfirm(e.target.value)}
               placeholder="SİL"
-              className="w-full px-4 py-2.5 rounded-[12px] bg-[#FAF8F4] border border-red-200 text-sm text-[#1C1917] focus:outline-none focus:ring-2 focus:ring-red-200 focus:border-red-400 transition"
+              className="w-full px-4 py-2.5 rounded-[12px] bg-canvas border border-red-200 text-sm text-ink focus:outline-none focus:ring-2 focus:ring-red-200 focus:border-red-400 transition"
             />
           </div>
           <div className="flex gap-2 pt-1">
-            <button onClick={() => setModal(null)} className="flex-1 py-2.5 rounded-[12px] text-sm font-semibold text-[#78716C] bg-[#F5F3EF]">
+            <button onClick={() => setModal(null)} className="flex-1 py-2.5 rounded-[12px] text-sm font-semibold text-ink-muted bg-surface-muted">
               Vazgeç
             </button>
             <button

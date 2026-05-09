@@ -21,19 +21,19 @@ export default function HomePage() {
     <main className="w-full">
       {/* Hero / Welcome */}
       {!loading && (
-        <div className="border-b border-[#E8E4DC] bg-white/50">
+        <div className="border-b border-rim bg-surface/50">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8">
             {user && profile ? (
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-xs font-semibold text-[#A8A29E] uppercase tracking-widest mb-1">Hoş geldin</p>
-                  <h1 className="text-2xl sm:text-3xl font-bold text-[#1C1917]">
+                  <p className="text-xs font-semibold text-ink-subtle uppercase tracking-widest mb-1">Hoş geldin</p>
+                  <h1 className="text-2xl sm:text-3xl font-bold text-ink">
                     İyi günler, {profile.displayName.split(" ")[0]} {profile.avatarEmoji}
                   </h1>
                 </div>
                 <Link
                   href="/canvas"
-                  className="px-5 py-2.5 bg-[#D9723F] text-white rounded-[14px] text-sm font-semibold shadow-sm hover:bg-[#C4622F] transition-all active:scale-95"
+                  className="px-5 py-2.5 bg-accent text-white rounded-[14px] text-sm font-semibold shadow-sm hover:bg-accent-hover transition-all active:scale-95"
                 >
                   + Yeni Çizim
                 </Link>
@@ -44,14 +44,14 @@ export default function HomePage() {
                   <Image src="/logo.png" alt="Vibe" width={80} height={80} />
                 </div>
                 <div className="text-center sm:text-left flex-1">
-                  <h1 className="text-2xl sm:text-3xl font-bold text-[#1C1917]">Duygularınla çiz, paylaş</h1>
-                  <p className="text-sm sm:text-base text-[#78716C] mt-1.5 max-w-lg">
+                  <h1 className="text-2xl sm:text-3xl font-bold text-ink">Duygularınla çiz, paylaş</h1>
+                  <p className="text-sm sm:text-base text-ink-muted mt-1.5 max-w-lg">
                     Vibe — kalp atışın ve duygularınla şekillenen çizim deneyimi.
                   </p>
                 </div>
                 <Link
                   href="/auth"
-                  className="px-6 py-3 bg-[#D9723F] text-white rounded-[14px] text-sm font-semibold shadow-sm hover:bg-[#C4622F] transition-all shrink-0"
+                  className="px-6 py-3 bg-accent text-white rounded-[14px] text-sm font-semibold shadow-sm hover:bg-accent-hover transition-all shrink-0"
                 >
                   Hemen Başla
                 </Link>
@@ -67,7 +67,7 @@ export default function HomePage() {
           {/* Main column */}
           <div className="flex-1 min-w-0">
             {/* Tab switcher */}
-            <div className="flex items-center gap-1 mb-5 sm:mb-6 bg-white border border-[#E8E4DC] rounded-[16px] p-1 w-fit shadow-sm">
+            <div className="flex items-center gap-1 mb-5 sm:mb-6 bg-surface border border-rim rounded-[16px] p-1 w-fit shadow-sm">
               <TabBtn active={tab === "discover"} onClick={() => setTab("discover")}>
                 <Compass size={14} className="shrink-0" />
                 <span>Keşfet</span>
@@ -103,8 +103,8 @@ function TabBtn({
       className={cn(
         "flex items-center gap-1.5 px-3 sm:px-4 py-2 rounded-[12px] text-xs sm:text-sm font-semibold transition-all duration-150 whitespace-nowrap",
         active
-          ? "bg-[#D9723F] text-white shadow-sm"
-          : "text-[#78716C] hover:bg-[#F5F3EF] hover:text-[#1C1917]"
+          ? "bg-accent text-white shadow-sm"
+          : "text-ink-muted hover:bg-surface-muted hover:text-ink"
       )}
     >
       {children}

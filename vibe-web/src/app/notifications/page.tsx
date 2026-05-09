@@ -70,11 +70,11 @@ export default function NotificationsPage() {
     return (
       <div className="max-w-2xl mx-auto px-4 py-8 space-y-3 animate-pulse">
         {[...Array(5)].map((_, i) => (
-          <div key={i} className="bg-white border border-[#E8E4DC] rounded-[18px] p-4 flex items-center gap-3">
-            <div className="w-10 h-10 rounded-full bg-[#E8E4DC] shrink-0" />
+          <div key={i} className="bg-surface border border-rim rounded-[18px] p-4 flex items-center gap-3">
+            <div className="w-10 h-10 rounded-full bg-rim shrink-0" />
             <div className="flex-1 space-y-2">
-              <div className="h-3 w-48 bg-[#E8E4DC] rounded-full" />
-              <div className="h-2.5 w-20 bg-[#E8E4DC] rounded-full" />
+              <div className="h-3 w-48 bg-rim rounded-full" />
+              <div className="h-2.5 w-20 bg-rim rounded-full" />
             </div>
           </div>
         ))}
@@ -84,22 +84,22 @@ export default function NotificationsPage() {
 
   return (
     <div className="max-w-2xl mx-auto px-4 py-6 sm:py-10">
-      <h1 className="text-2xl font-bold text-[#1C1917] mb-6">Bildirimler</h1>
+      <h1 className="text-2xl font-bold text-ink mb-6">Bildirimler</h1>
 
       {notifs.length === 0 ? (
         <div className="flex flex-col items-center py-24 text-center gap-3">
           <Bell size={48} className="text-[#E8E4DC]" />
-          <p className="text-sm font-medium text-[#78716C]">Henüz bildirim yok</p>
-          <p className="text-xs text-[#A8A29E]">Biri seni takip ettiğinde veya çizimini beğendiğinde burada görünür</p>
+          <p className="text-sm font-medium text-ink-muted">Henüz bildirim yok</p>
+          <p className="text-xs text-ink-subtle">Biri seni takip ettiğinde veya çizimini beğendiğinde burada görünür</p>
         </div>
       ) : (
-        <div className="bg-white border border-[#E8E4DC] rounded-[22px] shadow-sm divide-y divide-[#F5F3EF] overflow-hidden">
+        <div className="bg-surface border border-rim rounded-[22px] shadow-sm divide-y divide-surface-muted overflow-hidden">
           {notifs.map(n => {
             const meta = TYPE_META[n.type]
             return (
               <div
                 key={n.id}
-                className={`flex items-center gap-3 px-5 py-3.5 transition-colors ${!n.read ? "bg-[#D9723F]/4" : ""}`}
+                className={`flex items-center gap-3 px-5 py-3.5 transition-colors ${!n.read ? "bg-accent/4" : ""}`}
               >
                 {/* Sender avatar */}
                 <Link href={`/profile/${n.fromUserId}`} className="shrink-0">
@@ -108,14 +108,14 @@ export default function NotificationsPage() {
 
                 {/* Text */}
                 <div className="flex-1 min-w-0">
-                  <p className="text-sm text-[#1C1917] leading-snug">
+                  <p className="text-sm text-ink leading-snug">
                     <Link href={`/profile/${n.fromUserId}`} className="font-semibold hover:underline">
                       {n.fromUserName}
                     </Link>
                     {" "}
-                    <span className="text-[#78716C]">{meta.label}</span>
+                    <span className="text-ink-muted">{meta.label}</span>
                   </p>
-                  <p className="text-xs text-[#A8A29E] mt-0.5">{formatRelativeTime(n.createdAt)}</p>
+                  <p className="text-xs text-ink-subtle mt-0.5">{formatRelativeTime(n.createdAt)}</p>
                 </div>
 
                 {/* Type icon */}
@@ -133,7 +133,7 @@ export default function NotificationsPage() {
                     <img
                       src={n.postImageUrl}
                       alt="post"
-                      className="w-11 h-11 rounded-[10px] object-cover border border-[#E8E4DC]"
+                      className="w-11 h-11 rounded-[10px] object-cover border border-rim"
                     />
                   </Link>
                 )}

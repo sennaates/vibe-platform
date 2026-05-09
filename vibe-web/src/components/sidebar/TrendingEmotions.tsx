@@ -46,10 +46,10 @@ export function TrendingEmotions() {
   const max = trends[0]?.count ?? 1
 
   return (
-    <div className="bg-white border border-[#E8E4DC] rounded-[22px] p-5 shadow-sm">
+    <div className="bg-surface border border-rim rounded-[22px] p-5 shadow-sm">
       <div className="flex items-center gap-2 mb-4">
-        <TrendingUp size={15} className="text-[#D9723F]" />
-        <p className="text-xs font-semibold text-[#A8A29E] uppercase tracking-widest">Trend Duygular</p>
+        <TrendingUp size={15} className="text-accent" />
+        <p className="text-xs font-semibold text-ink-subtle uppercase tracking-widest">Trend Duygular</p>
       </div>
       <div className="space-y-3">
         {trends.map((t, i) => (
@@ -57,10 +57,10 @@ export function TrendingEmotions() {
             <span className="text-base shrink-0 w-6 text-center">{t.emoji}</span>
             <div className="flex-1 min-w-0">
               <div className="flex items-center justify-between mb-0.5">
-                <span className="text-xs font-semibold text-[#1C1917]">{t.label}</span>
-                <span className="text-[10px] text-[#A8A29E] font-medium">{t.count}</span>
+                <span className="text-xs font-semibold text-ink">{t.label}</span>
+                <span className="text-[10px] text-ink-subtle font-medium">{t.count}</span>
               </div>
-              <div className="h-1.5 bg-[#F5F3EF] rounded-full overflow-hidden">
+              <div className="h-1.5 bg-surface-muted rounded-full overflow-hidden">
                 <div
                   className="h-full rounded-full transition-all duration-500"
                   style={{

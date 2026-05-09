@@ -107,12 +107,12 @@ export default function ProfilePage({ params }: { params: Promise<{ uid: string 
   if (loading) {
     return (
       <div className="animate-pulse">
-        <div className="h-40 sm:h-52 bg-[#E8E4DC]" />
+        <div className="h-40 sm:h-52 bg-rim" />
         <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 -mt-12">
-          <div className="w-24 h-24 rounded-full bg-[#E8E4DC] border-4 border-[#FAF8F4]" />
+          <div className="w-24 h-24 rounded-full bg-rim border-4 border-[#FAF8F4]" />
           <div className="mt-4 space-y-2">
-            <div className="h-6 w-40 bg-[#E8E4DC] rounded-full" />
-            <div className="h-4 w-24 bg-[#E8E4DC] rounded-full" />
+            <div className="h-6 w-40 bg-rim rounded-full" />
+            <div className="h-4 w-24 bg-rim rounded-full" />
           </div>
         </div>
       </div>
@@ -123,8 +123,8 @@ export default function ProfilePage({ params }: { params: Promise<{ uid: string 
     return (
       <div className="flex flex-col items-center justify-center min-h-[calc(100vh-56px)] gap-4">
         <span className="text-5xl block">👤</span>
-        <p className="text-[#78716C] font-medium text-lg">Kullanıcı bulunamadı</p>
-        <Link href="/" className="text-[#D9723F] text-sm font-semibold hover:underline">Ana sayfaya dön</Link>
+        <p className="text-ink-muted font-medium text-lg">Kullanıcı bulunamadı</p>
+        <Link href="/" className="text-accent text-sm font-semibold hover:underline">Ana sayfaya dön</Link>
       </div>
     )
   }
@@ -171,11 +171,11 @@ export default function ProfilePage({ params }: { params: Promise<{ uid: string 
             {isOwn ? (
               <>
                 <Link href="/profile/edit"
-                  className="px-4 py-2 bg-white border border-[#E8E4DC] text-[#1C1917] rounded-[14px] text-sm font-semibold shadow-sm hover:bg-[#F5F3EF] transition-colors">
+                  className="px-4 py-2 bg-surface border border-rim text-ink rounded-[14px] text-sm font-semibold shadow-sm hover:bg-surface-muted transition-colors">
                   Düzenle
                 </Link>
                 <Link href="/canvas"
-                  className="px-4 py-2 bg-[#D9723F] text-white rounded-[14px] text-sm font-semibold shadow-sm hover:bg-[#C4622F] transition-colors">
+                  className="px-4 py-2 bg-accent text-white rounded-[14px] text-sm font-semibold shadow-sm hover:bg-accent-hover transition-colors">
                   + Çizim
                 </Link>
               </>
@@ -200,13 +200,13 @@ export default function ProfilePage({ params }: { params: Promise<{ uid: string 
           </div>
         </div>
 
-        <h1 className="font-bold text-[#1C1917] text-2xl sm:text-3xl">{pageProfile.displayName}</h1>
+        <h1 className="font-bold text-ink text-2xl sm:text-3xl">{pageProfile.displayName}</h1>
         {pageProfile.bio && (
-          <p className="text-sm sm:text-base text-[#78716C] mt-1.5 max-w-lg leading-relaxed">{pageProfile.bio}</p>
+          <p className="text-sm sm:text-base text-ink-muted mt-1.5 max-w-lg leading-relaxed">{pageProfile.bio}</p>
         )}
 
         {/* Stats */}
-        <div className="flex gap-6 sm:gap-8 mt-5 pb-6 border-b border-[#E8E4DC]">
+        <div className="flex gap-6 sm:gap-8 mt-5 pb-6 border-b border-rim">
           <StatPill value={pageProfile.postsCount} label="çizim" />
           <StatPill value={localFollowers} label="takipçi" onClick={() => setFollowModal("followers")} />
           <StatPill value={pageProfile.followingCount} label="takip" onClick={() => setFollowModal("following")} />
@@ -218,7 +218,7 @@ export default function ProfilePage({ params }: { params: Promise<{ uid: string 
         )}
 
         {/* Tab bar */}
-        <div className="flex border-b border-[#E8E4DC] mt-2">
+        <div className="flex border-b border-rim mt-2">
           <ProfileTabBtn active={profileTab === "posts"} onClick={() => setProfileTab("posts")}>
             <Grid3X3 size={15} /> Çizimler
           </ProfileTabBtn>
@@ -233,11 +233,11 @@ export default function ProfilePage({ params }: { params: Promise<{ uid: string 
             posts.length === 0 ? (
               <div className="flex flex-col items-center py-20 text-center gap-3">
                 <span className="text-5xl block">🎨</span>
-                <p className="text-sm font-medium text-[#78716C]">
+                <p className="text-sm font-medium text-ink-muted">
                   {isOwn ? "Henüz çizim paylaşmadın" : "Henüz çizim yok"}
                 </p>
                 {isOwn && (
-                  <Link href="/canvas" className="mt-2 px-5 py-2.5 bg-[#D9723F] text-white rounded-[14px] text-sm font-semibold shadow-sm">
+                  <Link href="/canvas" className="mt-2 px-5 py-2.5 bg-accent text-white rounded-[14px] text-sm font-semibold shadow-sm">
                     İlk çizimi yap
                   </Link>
                 )}
@@ -248,12 +248,12 @@ export default function ProfilePage({ params }: { params: Promise<{ uid: string 
           ) : (
             likedLoading ? (
               <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-2 sm:gap-3 animate-pulse">
-                {[...Array(6)].map((_, i) => <div key={i} className="aspect-square bg-[#E8E4DC] rounded-[14px]" />)}
+                {[...Array(6)].map((_, i) => <div key={i} className="aspect-square bg-rim rounded-[14px]" />)}
               </div>
             ) : likedPosts.length === 0 ? (
               <div className="flex flex-col items-center py-20 text-center gap-3">
                 <span className="text-5xl block">❤️</span>
-                <p className="text-sm font-medium text-[#78716C]">
+                <p className="text-sm font-medium text-ink-muted">
                   {isOwn ? "Henüz beğendiğin çizim yok" : "Henüz beğeni yok"}
                 </p>
               </div>
@@ -276,7 +276,7 @@ function PostGrid({ posts }: { posts: Post[] }) {
           <Link
             key={post.id}
             href={`/post/${post.id}`}
-            className="aspect-square relative rounded-[14px] overflow-hidden bg-[#F5F3EF] group shadow-sm hover:shadow-md transition-shadow"
+            className="aspect-square relative rounded-[14px] overflow-hidden bg-surface-muted group shadow-sm hover:shadow-md transition-shadow"
           >
             {post.imageUrl ? (
               <Image
@@ -306,8 +306,8 @@ function ProfileTabBtn({ active, onClick, children }: {
       onClick={onClick}
       className={`flex items-center gap-1.5 px-5 py-3 text-sm font-semibold border-b-2 transition-colors ${
         active
-          ? "border-[#1C1917] text-[#1C1917]"
-          : "border-transparent text-[#A8A29E] hover:text-[#78716C]"
+          ? "border-[#1C1917] text-ink"
+          : "border-transparent text-ink-subtle hover:text-ink-muted"
       }`}
     >
       {children}
@@ -322,15 +322,15 @@ function StatPill({ value, label, onClick }: { value: number; label: string; onC
         onClick={onClick}
         className="text-left hover:opacity-70 transition-opacity active:scale-95"
       >
-        <span className="font-bold text-[#1C1917] text-xl sm:text-2xl">{value}</span>
-        <span className="text-sm text-[#78716C] ml-1.5 underline-offset-2 hover:underline">{label}</span>
+        <span className="font-bold text-ink text-xl sm:text-2xl">{value}</span>
+        <span className="text-sm text-ink-muted ml-1.5 underline-offset-2 hover:underline">{label}</span>
       </button>
     )
   }
   return (
     <div>
-      <span className="font-bold text-[#1C1917] text-xl sm:text-2xl">{value}</span>
-      <span className="text-sm text-[#78716C] ml-1.5">{label}</span>
+      <span className="font-bold text-ink text-xl sm:text-2xl">{value}</span>
+      <span className="text-sm text-ink-muted ml-1.5">{label}</span>
     </div>
   )
 }

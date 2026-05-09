@@ -59,13 +59,13 @@ export default function StatsPage() {
   if (loading || fetching) {
     return (
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 animate-pulse space-y-5">
-        <div className="h-8 w-40 bg-[#E8E4DC] rounded-full" />
+        <div className="h-8 w-40 bg-rim rounded-full" />
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4">
-          {[...Array(8)].map((_, i) => <div key={i} className="h-28 bg-[#E8E4DC] rounded-[18px]" />)}
+          {[...Array(8)].map((_, i) => <div key={i} className="h-28 bg-rim rounded-[18px]" />)}
         </div>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-          <div className="h-64 bg-[#E8E4DC] rounded-[18px]" />
-          <div className="h-64 bg-[#E8E4DC] rounded-[18px]" />
+          <div className="h-64 bg-rim rounded-[18px]" />
+          <div className="h-64 bg-rim rounded-[18px]" />
         </div>
       </div>
     )
@@ -75,8 +75,8 @@ export default function StatsPage() {
     return (
       <div className="flex flex-col items-center justify-center min-h-[calc(100vh-56px)] gap-4 px-4">
         <span className="text-6xl block">📊</span>
-        <p className="text-xl font-bold text-[#1C1917]">İstatistikleri görmek için giriş yap</p>
-        <Link href="/auth" className="mt-3 px-6 py-3 bg-[#D9723F] text-white rounded-[14px] text-sm font-semibold shadow-sm hover:bg-[#C4622F] transition-colors">
+        <p className="text-xl font-bold text-ink">İstatistikleri görmek için giriş yap</p>
+        <Link href="/auth" className="mt-3 px-6 py-3 bg-accent text-white rounded-[14px] text-sm font-semibold shadow-sm hover:bg-accent-hover transition-colors">
           Giriş Yap
         </Link>
       </div>
@@ -113,17 +113,17 @@ export default function StatsPage() {
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8 space-y-6">
       <div>
-        <p className="text-xs font-semibold text-[#A8A29E] uppercase tracking-widest mb-0.5">Özet</p>
-        <h1 className="text-2xl sm:text-3xl font-bold text-[#1C1917]">İstatistikler</h1>
-        <p className="text-sm text-[#78716C] mt-1">Duygu ve ritim geçmişin</p>
+        <p className="text-xs font-semibold text-ink-subtle uppercase tracking-widest mb-0.5">Özet</p>
+        <h1 className="text-2xl sm:text-3xl font-bold text-ink">İstatistikler</h1>
+        <p className="text-sm text-ink-muted mt-1">Duygu ve ritim geçmişin</p>
       </div>
 
       {posts.length === 0 ? (
         <div className="flex flex-col items-center py-24 text-center gap-3">
           <span className="text-6xl block">📊</span>
-          <p className="font-bold text-[#1C1917] text-xl">Henüz veri yok</p>
-          <p className="text-sm text-[#78716C]">Çizim yaptıkça istatistikler burada görünür</p>
-          <Link href="/canvas" className="mt-4 px-6 py-3 bg-[#D9723F] text-white rounded-[14px] text-sm font-semibold shadow-sm">
+          <p className="font-bold text-ink text-xl">Henüz veri yok</p>
+          <p className="text-sm text-ink-muted">Çizim yaptıkça istatistikler burada görünür</p>
+          <Link href="/canvas" className="mt-4 px-6 py-3 bg-accent text-white rounded-[14px] text-sm font-semibold shadow-sm">
             Çizmeye Başla
           </Link>
         </div>
@@ -147,23 +147,23 @@ export default function StatsPage() {
 
           {/* Best post */}
           {bestPost && bestPost.likesCount > 0 && (
-            <div className="bg-white border border-[#E8E4DC] rounded-[22px] p-5 shadow-sm">
-              <p className="text-xs font-semibold text-[#A8A29E] uppercase tracking-widest mb-3">En Çok Beğenilen</p>
+            <div className="bg-surface border border-rim rounded-[22px] p-5 shadow-sm">
+              <p className="text-xs font-semibold text-ink-subtle uppercase tracking-widest mb-3">En Çok Beğenilen</p>
               <Link href={`/post/${bestPost.id}`} className="flex items-center gap-4 group">
-                <div className="w-16 h-16 rounded-[14px] overflow-hidden shrink-0 border border-[#E8E4DC]">
+                <div className="w-16 h-16 rounded-[14px] overflow-hidden shrink-0 border border-rim">
                   {bestPost.imageUrl ? (
                     <Image src={bestPost.imageUrl} alt={bestPost.emotion} width={64} height={64} className="object-cover w-full h-full" />
                   ) : (
-                    <div className="w-full h-full bg-[#F5F3EF] flex items-center justify-center text-2xl">🎨</div>
+                    <div className="w-full h-full bg-surface-muted flex items-center justify-center text-2xl">🎨</div>
                   )}
                 </div>
                 <div className="flex-1 min-w-0">
-                  <p className="font-semibold text-[#1C1917] group-hover:underline truncate">{bestPost.emotion}</p>
-                  <p className="text-sm text-[#78716C] mt-0.5">
+                  <p className="font-semibold text-ink group-hover:underline truncate">{bestPost.emotion}</p>
+                  <p className="text-sm text-ink-muted mt-0.5">
                     ❤️ {bestPost.likesCount} beğeni · 💬 {bestPost.commentsCount} yorum
                   </p>
                   {bestPost.caption && (
-                    <p className="text-xs text-[#A8A29E] mt-0.5 truncate">{bestPost.caption}</p>
+                    <p className="text-xs text-ink-subtle mt-0.5 truncate">{bestPost.caption}</p>
                   )}
                 </div>
                 <span className="text-2xl shrink-0">🏆</span>
@@ -174,9 +174,9 @@ export default function StatsPage() {
           {/* Charts */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
             {bpmData.length > 1 && (
-              <div className="bg-white border border-[#E8E4DC] rounded-[22px] p-5 sm:p-6 shadow-sm">
-                <p className="text-xs font-semibold text-[#A8A29E] uppercase tracking-widest mb-0.5">Zaman Serisi</p>
-                <p className="text-base font-semibold text-[#1C1917] mb-5">BPM Geçmişi</p>
+              <div className="bg-surface border border-rim rounded-[22px] p-5 sm:p-6 shadow-sm">
+                <p className="text-xs font-semibold text-ink-subtle uppercase tracking-widest mb-0.5">Zaman Serisi</p>
+                <p className="text-base font-semibold text-ink mb-5">BPM Geçmişi</p>
                 <ResponsiveContainer width="100%" height={220}>
                   <AreaChart data={bpmData} margin={{ top: 4, right: 4, left: -16, bottom: 0 }}>
                     <defs>
@@ -198,9 +198,9 @@ export default function StatsPage() {
             )}
 
             {emotionData.length > 0 && (
-              <div className="bg-white border border-[#E8E4DC] rounded-[22px] p-5 sm:p-6 shadow-sm">
-                <p className="text-xs font-semibold text-[#A8A29E] uppercase tracking-widest mb-0.5">Dağılım</p>
-                <p className="text-base font-semibold text-[#1C1917] mb-5">Duygu Dağılımı</p>
+              <div className="bg-surface border border-rim rounded-[22px] p-5 sm:p-6 shadow-sm">
+                <p className="text-xs font-semibold text-ink-subtle uppercase tracking-widest mb-0.5">Dağılım</p>
+                <p className="text-base font-semibold text-ink mb-5">Duygu Dağılımı</p>
                 <ResponsiveContainer width="100%" height={220}>
                   <BarChart data={emotionData} margin={{ top: 4, right: 4, left: -16, bottom: 0 }}>
                     <CartesianGrid strokeDasharray="0" stroke="#F5F3EF" vertical={false} />
@@ -228,14 +228,14 @@ function StatCard({
 }) {
   return (
     <div
-      className="bg-white border rounded-[18px] p-4 sm:p-5 shadow-sm transition-all"
+      className="bg-surface border rounded-[18px] p-4 sm:p-5 shadow-sm transition-all"
       style={{ borderColor: highlight ? accent + "50" : "#E8E4DC" }}
     >
       <div className="flex items-center gap-2.5 mb-2">
         <div className="w-8 h-8 rounded-[10px] flex items-center justify-center text-sm" style={{ backgroundColor: accent + "18" }}>
           {icon}
         </div>
-        <span className="text-xs font-medium text-[#78716C]">{label}</span>
+        <span className="text-xs font-medium text-ink-muted">{label}</span>
       </div>
       <p className="text-xl sm:text-2xl font-bold" style={{ color: highlight ? accent : "#1C1917" }}>{value}</p>
     </div>
