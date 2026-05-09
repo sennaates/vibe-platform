@@ -3,7 +3,7 @@
 import Link from "next/link"
 import Image from "next/image"
 import { usePathname } from "next/navigation"
-import { Home, ImageIcon, BarChart2, PenLine, Search, Bell } from "lucide-react"
+import { Home, ImageIcon, BarChart2, PenLine, Search, Bell, Settings } from "lucide-react"
 import { useEffect, useState } from "react"
 import { collection, query, where, onSnapshot } from "firebase/firestore"
 import { db } from "@/lib/firebase"
@@ -101,6 +101,13 @@ export function Navbar() {
                 </span>
               )}
             </div>
+          )}
+
+          {/* Settings */}
+          {user && (
+            <NavIconLink href="/settings" active={pathname === "/settings"}>
+              <Settings size={18} strokeWidth={pathname === "/settings" ? 2.5 : 1.75} />
+            </NavIconLink>
           )}
 
           {/* Profile avatar or login */}

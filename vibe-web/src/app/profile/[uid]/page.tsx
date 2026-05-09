@@ -8,10 +8,9 @@ import {
   setDoc, deleteDoc, updateDoc, increment, serverTimestamp
 } from "firebase/firestore"
 import { Grid3X3, Heart } from "lucide-react"
-import { signOut } from "firebase/auth"
 import { useRouter } from "next/navigation"
-import { ArrowLeft, LogOut, UserPlus, UserCheck, Loader2 } from "lucide-react"
-import { auth, db } from "@/lib/firebase"
+import { ArrowLeft, Settings, UserPlus, UserCheck, Loader2 } from "lucide-react"
+import { db } from "@/lib/firebase"
 import { useAuth } from "@/hooks/useAuth"
 import { profileColors } from "@/lib/design"
 import { createNotification } from "@/lib/notifications"
@@ -104,10 +103,6 @@ export default function ProfilePage({ params }: { params: Promise<{ uid: string 
     setFollowLoading(false)
   }
 
-  async function handleLogout() {
-    await signOut(auth)
-    router.push("/")
-  }
 
   if (loading) {
     return (
@@ -151,13 +146,13 @@ export default function ProfilePage({ params }: { params: Promise<{ uid: string 
           </Link>
         )}
         {isOwn && (
-          <button
-            onClick={handleLogout}
+          <Link
+            href="/settings"
             className="absolute top-4 right-4 sm:right-6 flex items-center gap-1.5 text-xs font-semibold text-white/80 bg-black/15 hover:bg-black/25 backdrop-blur-sm px-3 py-1.5 rounded-full transition-colors"
           >
-            <LogOut size={12} />
-            Çıkış
-          </button>
+            <Settings size={12} />
+            Ayarlar
+          </Link>
         )}
       </div>
 
