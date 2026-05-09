@@ -173,15 +173,21 @@ struct Comment: Identifiable {
     let userAvatarEmoji: String
     let text: String
     let createdAt: Date
+    // Yorum yanıtı alanları
+    var replyToId: String?
+    var replyToName: String?
 
     var dict: [String: Any] {
-        [
+        var d: [String: Any] = [
             "userId": userId,
             "userDisplayName": userDisplayName,
             "userAvatarEmoji": userAvatarEmoji,
             "text": text,
             "createdAt": createdAt
         ]
+        if let rId = replyToId   { d["replyToId"]   = rId }
+        if let rName = replyToName { d["replyToName"] = rName }
+        return d
     }
 
     static func from(_ dict: [String: Any], id: String) -> Comment? {
@@ -198,7 +204,9 @@ struct Comment: Identifiable {
             userDisplayName: userDisplayName,
             userAvatarEmoji: userAvatarEmoji,
             text: text,
-            createdAt: (dict["createdAt"] as? Date) ?? Date()
+            createdAt: (dict["createdAt"] as? Date) ?? Date(),
+            replyToId: dict["replyToId"] as? String,
+            replyToName: dict["replyToName"] as? String
         )
     }
 }

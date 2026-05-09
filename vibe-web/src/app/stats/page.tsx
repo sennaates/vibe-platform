@@ -105,9 +105,43 @@ export default function StatsPage() {
   const bestPost  = posts.length ? posts.reduce((a, b) => (b.likesCount ?? 0) > (a.likesCount ?? 0) ? b : a) : null
   const streak    = calcStreak(posts)
 
+  // Haftanın günlerine göre dağılım
+  const DAYS = ["Paz", "Pzt", "Sal", "Çar", "Per", "Cum", "Cmt"]
+  const dayMap: Record<number, number> = { 0:0, 1:0, 2:0, 3:0, 4:0, 5:0, 6:0 }
+  posts.forEach(p => {
+    const d = (p.createdAt as Timestamp).toDate().getDay()
+    dayMap[d]++
+  })
+  const dayData = DAYS.map((name, i) => ({ name, count: dayMap[i] }))
+
+  // Top hashtagler (kendi gönderilerinden)
+  const tagMap: Record<string, number> = {}
+  posts.forEach(p => {
+    if (p.tags) p.tags.forEach(t => { tagMap[t] = (tagMap[t] ?? 0) + 1 })
+  })
+  const topTags = Object.entries(tagMap).sort((a, b) => b[1] - a[1]).slice(0, 10)
+
+  // Son 12 hafta aktivite haritası
+  const today = new Date(); today.setHours(0,0,0,0)
+  const heatCells: { date: string; count: number; level: number }[] = []
+  const postDayMap: Record<string, number> = {}
+  posts.forEach(p => {
+    const d = (p.createdAt as Timestamp).toDate()
+    d.setHours(0,0,0,0)
+    const key = d.toISOString().slice(0,10)
+    postDayMap[key] = (postDayMap[key] ?? 0) + 1
+  })
+  for (let i = 83; i >= 0; i--) {
+    const d = new Date(today); d.setDate(d.getDate() - i)
+    const key = d.toISOString().slice(0,10)
+    const count = postDayMap[key] ?? 0
+    heatCells.push({ date: key, count, level: count === 0 ? 0 : count === 1 ? 1 : count <= 2 ? 2 : 3 })
+  }
+
   const tooltipStyle = {
     fontSize: 12, borderRadius: 12,
-    border: "1px solid #E8E4DC", boxShadow: "0 4px 12px rgba(0,0,0,0.06)"
+    border: "1px solid var(--rim)", backgroundColor: "var(--surface)",
+    color: "var(--ink)", boxShadow: "0 4px 12px rgba(0,0,0,0.08)"
   }
 
   return (
@@ -171,13 +205,44 @@ export default function StatsPage() {
             </div>
           )}
 
-          {/* Charts */}
+          {/* Aktivite Haritası */}
+          <div className="bg-surface border border-rim rounded-[22px] p-5 sm:p-6 shadow-sm">
+            <p className="text-xs font-semibold text-ink-subtle uppercase tracking-widest mb-0.5">Son 12 Hafta</p>
+            <p className="text-base font-semibold text-ink mb-4">Aktivite Haritası</p>
+            <div className="flex gap-1 flex-wrap">
+              {heatCells.map(cell => (
+                <div
+                  key={cell.date}
+                  title={`${cell.date}: ${cell.count} çizim`}
+                  className="w-3.5 h-3.5 rounded-[3px] transition-colors"
+                  style={{
+                    backgroundColor:
+                      cell.level === 0 ? "var(--surface-muted)" :
+                      cell.level === 1 ? "#D9723F40" :
+                      cell.level === 2 ? "#D9723F80" :
+                                         "#D9723F"
+                  }}
+                />
+              ))}
+            </div>
+            <div className="flex items-center gap-1.5 mt-3 justify-end">
+              <span className="text-[10px] text-ink-subtle">Az</span>
+              {[0,1,2,3].map(l => (
+                <div key={l} className="w-3 h-3 rounded-[3px]" style={{
+                  backgroundColor: l === 0 ? "var(--surface-muted)" : l === 1 ? "#D9723F40" : l === 2 ? "#D9723F80" : "#D9723F"
+                }} />
+              ))}
+              <span className="text-[10px] text-ink-subtle">Çok</span>
+            </div>
+          </div>
+
+          {/* Charts + Haftanın Günleri */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
             {bpmData.length > 1 && (
               <div className="bg-surface border border-rim rounded-[22px] p-5 sm:p-6 shadow-sm">
                 <p className="text-xs font-semibold text-ink-subtle uppercase tracking-widest mb-0.5">Zaman Serisi</p>
                 <p className="text-base font-semibold text-ink mb-5">BPM Geçmişi</p>
-                <ResponsiveContainer width="100%" height={220}>
+                <ResponsiveContainer width="100%" height={200}>
                   <AreaChart data={bpmData} margin={{ top: 4, right: 4, left: -16, bottom: 0 }}>
                     <defs>
                       <linearGradient id="bpmGrad" x1="0" y1="0" x2="0" y2="1">
@@ -185,13 +250,13 @@ export default function StatsPage() {
                         <stop offset="100%" stopColor="#D9723F" stopOpacity={0.02} />
                       </linearGradient>
                     </defs>
-                    <CartesianGrid strokeDasharray="0" stroke="#F5F3EF" vertical={false} />
-                    <XAxis dataKey="index" tick={{ fontSize: 10, fill: "#A8A29E" }} axisLine={false} tickLine={false} />
-                    <YAxis tick={{ fontSize: 10, fill: "#A8A29E" }} domain={[40, 180]} axisLine={false} tickLine={false} />
-                    <Tooltip contentStyle={tooltipStyle} formatter={(v) => [`${v} BPM`, ""]} cursor={{ stroke: "#E8E4DC" }} />
+                    <CartesianGrid strokeDasharray="0" stroke="var(--rim)" vertical={false} />
+                    <XAxis dataKey="index" tick={{ fontSize: 10, fill: "var(--ink-subtle)" }} axisLine={false} tickLine={false} />
+                    <YAxis tick={{ fontSize: 10, fill: "var(--ink-subtle)" }} domain={[40, 180]} axisLine={false} tickLine={false} />
+                    <Tooltip contentStyle={tooltipStyle} formatter={(v) => [`${v} BPM`, ""]} cursor={{ stroke: "var(--rim)" }} />
                     <Area type="monotone" dataKey="bpm" stroke="#D9723F" strokeWidth={2} fill="url(#bpmGrad)"
                       dot={{ fill: "#D9723F", r: 3, strokeWidth: 0 }}
-                      activeDot={{ r: 5, fill: "#D9723F", strokeWidth: 2, stroke: "#fff" }} />
+                      activeDot={{ r: 5, fill: "#D9723F", strokeWidth: 2, stroke: "var(--surface)" }} />
                   </AreaChart>
                 </ResponsiveContainer>
               </div>
@@ -201,17 +266,59 @@ export default function StatsPage() {
               <div className="bg-surface border border-rim rounded-[22px] p-5 sm:p-6 shadow-sm">
                 <p className="text-xs font-semibold text-ink-subtle uppercase tracking-widest mb-0.5">Dağılım</p>
                 <p className="text-base font-semibold text-ink mb-5">Duygu Dağılımı</p>
-                <ResponsiveContainer width="100%" height={220}>
+                <ResponsiveContainer width="100%" height={200}>
                   <BarChart data={emotionData} margin={{ top: 4, right: 4, left: -16, bottom: 0 }}>
-                    <CartesianGrid strokeDasharray="0" stroke="#F5F3EF" vertical={false} />
+                    <CartesianGrid strokeDasharray="0" stroke="var(--rim)" vertical={false} />
                     <XAxis dataKey="emoji" tick={{ fontSize: 16 }} axisLine={false} tickLine={false} />
-                    <YAxis tick={{ fontSize: 10, fill: "#A8A29E" }} allowDecimals={false} axisLine={false} tickLine={false} />
+                    <YAxis tick={{ fontSize: 10, fill: "var(--ink-subtle)" }} allowDecimals={false} axisLine={false} tickLine={false} />
                     <Tooltip contentStyle={tooltipStyle}
                       formatter={(v, _, props) => [`${v} çizim`, (props as { payload?: EmotionStat }).payload?.label ?? ""]}
-                      cursor={{ fill: "#F5F3EF" }} />
+                      cursor={{ fill: "var(--surface-muted)" }} />
                     <Bar dataKey="count" radius={[8, 8, 0, 0]} fill="#D9723F" />
                   </BarChart>
                 </ResponsiveContainer>
+              </div>
+            )}
+
+            {/* Haftanın Günleri */}
+            <div className="bg-surface border border-rim rounded-[22px] p-5 sm:p-6 shadow-sm">
+              <p className="text-xs font-semibold text-ink-subtle uppercase tracking-widest mb-0.5">Alışkanlık</p>
+              <p className="text-base font-semibold text-ink mb-5">Haftanın Günlerine Göre</p>
+              <ResponsiveContainer width="100%" height={200}>
+                <BarChart data={dayData} margin={{ top: 4, right: 4, left: -16, bottom: 0 }}>
+                  <CartesianGrid strokeDasharray="0" stroke="var(--rim)" vertical={false} />
+                  <XAxis dataKey="name" tick={{ fontSize: 11, fill: "var(--ink-subtle)" }} axisLine={false} tickLine={false} />
+                  <YAxis tick={{ fontSize: 10, fill: "var(--ink-subtle)" }} allowDecimals={false} axisLine={false} tickLine={false} />
+                  <Tooltip contentStyle={tooltipStyle} formatter={(v) => [`${v} çizim`, ""]} cursor={{ fill: "var(--surface-muted)" }} />
+                  <Bar dataKey="count" radius={[8, 8, 0, 0]} fill="#C45F8A" />
+                </BarChart>
+              </ResponsiveContainer>
+            </div>
+
+            {/* Top Hashtagler */}
+            {topTags.length > 0 && (
+              <div className="bg-surface border border-rim rounded-[22px] p-5 sm:p-6 shadow-sm">
+                <p className="text-xs font-semibold text-ink-subtle uppercase tracking-widest mb-0.5">Etiketler</p>
+                <p className="text-base font-semibold text-ink mb-4">En Çok Kullandığın Hashtagler</p>
+                <div className="space-y-2.5">
+                  {topTags.map(([tag, count], i) => (
+                    <Link key={tag} href={`/hashtag/${tag}`} className="flex items-center gap-3 group">
+                      <span className="text-xs font-bold text-ink-subtle w-4 shrink-0">{i + 1}</span>
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center justify-between mb-1">
+                          <span className="text-sm font-semibold text-accent group-hover:underline">#{tag}</span>
+                          <span className="text-xs text-ink-subtle">{count}×</span>
+                        </div>
+                        <div className="h-1.5 bg-surface-muted rounded-full overflow-hidden">
+                          <div
+                            className="h-full bg-accent rounded-full transition-all duration-500"
+                            style={{ width: `${(count / (topTags[0]?.[1] ?? 1)) * 100}%`, opacity: 0.6 + (i === 0 ? 0.4 : 0) }}
+                          />
+                        </div>
+                      </div>
+                    </Link>
+                  ))}
+                </div>
               </div>
             )}
           </div>

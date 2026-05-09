@@ -48,7 +48,14 @@ class SocialService: ObservableObject {
 
     // MARK: - Yorum
 
-    func addComment(postId: String, text: String, user: SocialUser, completion: @escaping (Error?) -> Void) {
+    func addComment(
+        postId: String,
+        text: String,
+        user: SocialUser,
+        replyToId: String? = nil,
+        replyToName: String? = nil,
+        completion: @escaping (Error?) -> Void
+    ) {
         let commentRef = db.collection("posts").document(postId).collection("comments").document()
         let comment = Comment(
             id: commentRef.documentID,
@@ -56,7 +63,9 @@ class SocialService: ObservableObject {
             userDisplayName: user.displayName,
             userAvatarEmoji: user.avatarEmoji,
             text: text,
-            createdAt: Date()
+            createdAt: Date(),
+            replyToId: replyToId,
+            replyToName: replyToName
         )
         commentRef.setData(comment.dict) { [weak self] error in
             guard let self else { return }
@@ -109,6 +118,17 @@ class SocialService: ObservableObject {
                 } ?? []
                 onUpdate(comments)
             }
+    }
+
+    func deleteComment(postId: String, commentId: String, completion: @escaping (Error?) -> Void) {
+        let commentRef = db.collection("posts").document(postId).collection("comments").document(commentId)
+        commentRef.delete { [weak self] error in
+            if error == nil {
+                self?.db.collection("posts").document(postId)
+                    .updateData(["commentCount": FieldValue.increment(Int64(-1))])
+            }
+            completion(error)
+        }
     }
 
     // MARK: - Takip
