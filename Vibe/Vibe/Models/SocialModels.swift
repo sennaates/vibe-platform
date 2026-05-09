@@ -70,8 +70,19 @@ struct Post: Identifiable, Hashable {
         ProfileColor(rawValue: userProfileColorRaw) ?? .blue
     }
 
+    /// Extracts lowercase hashtag strings from caption (e.g. "#mutlu" → ["mutlu"])
+    var extractedTags: [String] {
+        let pattern = #"#([\wÀ-ɏЀ-ӿ]+)"#
+        guard let regex = try? NSRegularExpression(pattern: pattern) else { return [] }
+        let range = NSRange(caption.startIndex..., in: caption)
+        return regex.matches(in: caption, range: range).compactMap { match in
+            guard let r = Range(match.range(at: 1), in: caption) else { return nil }
+            return String(caption[r]).lowercased()
+        }
+    }
+
     var dict: [String: Any] {
-        [
+        var d: [String: Any] = [
             "userId": userId,
             "userDisplayName": userDisplayName,
             "userAvatarEmoji": userAvatarEmoji,
@@ -83,6 +94,9 @@ struct Post: Identifiable, Hashable {
             "commentCount": commentCount,
             "createdAt": createdAt
         ]
+        let tags = extractedTags
+        if !tags.isEmpty { d["tags"] = tags }
+        return d
     }
 
     static func from(_ dict: [String: Any], id: String) -> Post? {
@@ -112,6 +126,46 @@ struct Post: Identifiable, Hashable {
     }
 }
 
+// MARK: - Bildirim
+
+struct AppNotification: Identifiable {
+    let id: String
+    let type: String          // "follow" | "like" | "comment"
+    let fromUserId: String
+    let fromUserName: String
+    let fromUserAvatar: String
+    let fromUserColor: String
+    let postId: String?
+    let postImageUrl: String?
+    var read: Bool
+    let createdAt: Date
+
+    static func from(_ dict: [String: Any], id: String) -> AppNotification? {
+        guard
+            let type         = dict["type"]         as? String,
+            let fromUserId   = dict["fromUserId"]   as? String,
+            let fromUserName = dict["fromUserName"] as? String,
+            let fromUserAvatar = dict["fromUserAvatar"] as? String,
+            let fromUserColor  = dict["fromUserColor"]  as? String
+        else { return nil }
+
+        let ts = dict["createdAt"] as? Date ?? Date()
+
+        return AppNotification(
+            id: id,
+            type: type,
+            fromUserId: fromUserId,
+            fromUserName: fromUserName,
+            fromUserAvatar: fromUserAvatar,
+            fromUserColor: fromUserColor,
+            postId: dict["postId"] as? String,
+            postImageUrl: dict["postImageUrl"] as? String,
+            read: dict["read"] as? Bool ?? false,
+            createdAt: ts
+        )
+    }
+}
+
 struct Comment: Identifiable {
     let id: String
     let userId: String
@@ -119,15 +173,21 @@ struct Comment: Identifiable {
     let userAvatarEmoji: String
     let text: String
     let createdAt: Date
+    // Yorum yanıtı alanları
+    var replyToId: String?
+    var replyToName: String?
 
     var dict: [String: Any] {
-        [
+        var d: [String: Any] = [
             "userId": userId,
             "userDisplayName": userDisplayName,
             "userAvatarEmoji": userAvatarEmoji,
             "text": text,
             "createdAt": createdAt
         ]
+        if let rId = replyToId   { d["replyToId"]   = rId }
+        if let rName = replyToName { d["replyToName"] = rName }
+        return d
     }
 
     static func from(_ dict: [String: Any], id: String) -> Comment? {
@@ -144,7 +204,9 @@ struct Comment: Identifiable {
             userDisplayName: userDisplayName,
             userAvatarEmoji: userAvatarEmoji,
             text: text,
-            createdAt: (dict["createdAt"] as? Date) ?? Date()
+            createdAt: (dict["createdAt"] as? Date) ?? Date(),
+            replyToId: dict["replyToId"] as? String,
+            replyToName: dict["replyToName"] as? String
         )
     }
 }

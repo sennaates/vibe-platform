@@ -51,8 +51,8 @@ export default function EditProfilePage() {
   if (loading || !profile) {
     return (
       <div className="max-w-2xl mx-auto px-4 py-8 animate-pulse space-y-4">
-        <div className="h-6 w-24 bg-[#E8E4DC] rounded-full" />
-        <div className="h-40 bg-[#E8E4DC] rounded-[22px]" />
+        <div className="h-6 w-24 bg-rim rounded-full" />
+        <div className="h-40 bg-rim rounded-[22px]" />
       </div>
     )
   }
@@ -64,13 +64,13 @@ export default function EditProfilePage() {
       {/* Header */}
       <div className="flex items-center justify-between mb-6">
         <Link href={`/profile/${user?.uid}`}
-          className="flex items-center gap-1.5 text-sm text-[#78716C] hover:text-[#1C1917] transition-colors font-medium">
+          className="flex items-center gap-1.5 text-sm text-ink-muted hover:text-ink transition-colors font-medium">
           <ArrowLeft size={16} />
           Geri
         </Link>
-        <h1 className="text-base font-bold text-[#1C1917]">Profili Düzenle</h1>
+        <h1 className="text-base font-bold text-ink">Profili Düzenle</h1>
         <button onClick={handleSave} disabled={saving || !displayName.trim()}
-          className="flex items-center gap-1.5 px-4 py-1.5 bg-[#D9723F] text-white rounded-full text-sm font-semibold disabled:opacity-40 transition-all active:scale-95">
+          className="flex items-center gap-1.5 px-4 py-1.5 bg-accent text-white rounded-full text-sm font-semibold disabled:opacity-40 transition-all active:scale-95">
           <Check size={14} strokeWidth={2.5} />
           {saving ? "Kaydediliyor…" : "Kaydet"}
         </button>
@@ -84,36 +84,36 @@ export default function EditProfilePage() {
         >
           {emoji}
         </div>
-        <p className="text-xs text-[#A8A29E] mt-2">{displayName || "Adın"}</p>
+        <p className="text-xs text-ink-subtle mt-2">{displayName || "Adın"}</p>
       </div>
 
       <div className="space-y-4">
         {/* Ad */}
-        <div className="bg-white border border-[#E8E4DC] rounded-[22px] p-5 shadow-sm">
-          <label className="block text-xs font-semibold text-[#A8A29E] uppercase tracking-widest mb-3">Bilgiler</label>
+        <div className="bg-surface border border-rim rounded-[22px] p-5 shadow-sm">
+          <label className="block text-xs font-semibold text-ink-subtle uppercase tracking-widest mb-3">Bilgiler</label>
           <div className="space-y-3">
             <div>
-              <label className="block text-xs font-medium text-[#78716C] mb-1.5">Ad</label>
+              <label className="block text-xs font-medium text-ink-muted mb-1.5">Ad</label>
               <input type="text" value={displayName} onChange={e => setName(e.target.value)} placeholder="Adın"
-                className="w-full px-4 py-2.5 rounded-[12px] bg-[#FAF8F4] border border-[#E8E4DC] text-sm text-[#1C1917] placeholder:text-[#A8A29E] focus:outline-none focus:ring-2 focus:ring-[#D9723F]/20 focus:border-[#D9723F] transition" />
+                className="w-full px-4 py-2.5 rounded-[12px] bg-canvas border border-rim text-sm text-ink placeholder:text-ink-subtle focus:outline-none focus:ring-2 focus:ring-accent/20 focus:border-accent transition" />
             </div>
             <div>
-              <label className="block text-xs font-medium text-[#78716C] mb-1.5">Bio</label>
+              <label className="block text-xs font-medium text-ink-muted mb-1.5">Bio</label>
               <textarea value={bio} onChange={e => setBio(e.target.value)} placeholder="Kendin hakkında bir şey yaz…" rows={2}
-                className="w-full px-4 py-2.5 rounded-[12px] bg-[#FAF8F4] border border-[#E8E4DC] text-sm text-[#1C1917] placeholder:text-[#A8A29E] focus:outline-none focus:ring-2 focus:ring-[#D9723F]/20 focus:border-[#D9723F] resize-none transition" />
+                className="w-full px-4 py-2.5 rounded-[12px] bg-canvas border border-rim text-sm text-ink placeholder:text-ink-subtle focus:outline-none focus:ring-2 focus:ring-accent/20 focus:border-accent resize-none transition" />
             </div>
           </div>
         </div>
 
         {/* Emoji */}
-        <div className="bg-white border border-[#E8E4DC] rounded-[22px] p-5 shadow-sm">
-          <label className="block text-xs font-semibold text-[#A8A29E] uppercase tracking-widest mb-3">Avatar Emoji</label>
+        <div className="bg-surface border border-rim rounded-[22px] p-5 shadow-sm">
+          <label className="block text-xs font-semibold text-ink-subtle uppercase tracking-widest mb-3">Avatar Emoji</label>
           <div className="grid grid-cols-10 gap-1.5">
             {EMOJIS.map(e => (
               <button key={e} onClick={() => setEmoji(e)}
                 className={cn(
                   "h-10 rounded-[10px] text-xl transition-all active:scale-90",
-                  emoji === e ? "scale-110 ring-2 ring-[#D9723F]/40" : "bg-[#F5F3EF] hover:bg-[#EDE9E3]"
+                  emoji === e ? "scale-110 ring-2 ring-accent/40" : "bg-surface-muted hover:bg-[#EDE9E3]"
                 )}
                 style={emoji === e ? { backgroundColor: selectedColor + "20" } : {}}>
                 {e}
@@ -123,12 +123,12 @@ export default function EditProfilePage() {
         </div>
 
         {/* Renk */}
-        <div className="bg-white border border-[#E8E4DC] rounded-[22px] p-5 shadow-sm">
-          <label className="block text-xs font-semibold text-[#A8A29E] uppercase tracking-widest mb-3">Profil Rengi</label>
+        <div className="bg-surface border border-rim rounded-[22px] p-5 shadow-sm">
+          <label className="block text-xs font-semibold text-ink-subtle uppercase tracking-widest mb-3">Profil Rengi</label>
           <div className="flex flex-wrap gap-3">
             {COLOR_KEYS.map(k => (
               <button key={k} onClick={() => setColor(k)}
-                className={cn("w-9 h-9 rounded-full transition-all active:scale-90", color === k ? "scale-125 ring-2 ring-offset-2 ring-[#D9723F]" : "hover:scale-110")}
+                className={cn("w-9 h-9 rounded-full transition-all active:scale-90", color === k ? "scale-125 ring-2 ring-offset-2 ring-accent" : "hover:scale-110")}
                 style={{ backgroundColor: profileColors[k] }} />
             ))}
           </div>

@@ -17,6 +17,7 @@ import { profileColors } from "@/lib/design"
 import { formatRelativeTime } from "@/lib/utils"
 import { createNotification } from "@/lib/notifications"
 import { toast } from "@/lib/toast"
+import { Caption } from "@/components/ui/Caption"
 import type { Post, Comment } from "@/types"
 
 export default function PostDetailPage({ params }: { params: Promise<{ id: string }> }) {
@@ -35,7 +36,9 @@ export default function PostDetailPage({ params }: { params: Promise<{ id: strin
   const [editingCaption, setEditing] = useState(false)
   const [captionDraft, setCaptionDraft] = useState("")
   const [savingCaption, setSavingCaption] = useState(false)
+  const [replyTo, setReplyTo]       = useState<{ id: string; name: string } | null>(null)
   const bottomRef                 = useRef<HTMLDivElement>(null)
+  const inputRef                  = useRef<HTMLInputElement>(null)
 
   useEffect(() => {
     getDoc(doc(db, "posts", id)).then(snap => {
@@ -102,8 +105,14 @@ export default function PostDetailPage({ params }: { params: Promise<{ id: strin
   async function saveCaption() {
     if (!post) return
     setSavingCaption(true)
-    await updateDoc(doc(db, "posts", id), { caption: captionDraft.trim() })
-    setPost(p => p ? { ...p, caption: captionDraft.trim() } : p)
+    const trimmed = captionDraft.trim()
+    // Extract hashtags from new caption
+    const tags = [...trimmed.matchAll(/#([\wÀ-ɏЀ-ӿ]+)/g)].map(m => m[1].toLowerCase())
+    await updateDoc(doc(db, "posts", id), {
+      caption: trimmed,
+      ...(tags.length > 0 ? { tags } : { tags: [] }),
+    })
+    setPost(p => p ? { ...p, caption: trimmed, tags } : p)
     setEditing(false)
     setSavingCaption(false)
     toast.success("Açıklama güncellendi")
@@ -120,13 +129,16 @@ export default function PostDetailPage({ params }: { params: Promise<{ id: strin
   async function sendComment() {
     if (!text.trim() || !user || !profile || sending) return
     setSending(true)
+    const commentText = replyTo ? `@${replyTo.name} ${text.trim()}` : text.trim()
     await addDoc(collection(db, "posts", id, "comments"), {
       userId: user.uid, userName: profile.displayName,
       userAvatar: profile.avatarEmoji, userColor: profile.profileColor,
-      text: text.trim(), createdAt: serverTimestamp(),
+      text: commentText,
+      replyToId: replyTo?.id ?? null,
+      replyToName: replyTo?.name ?? null,
+      createdAt: serverTimestamp(),
     })
     await updateDoc(doc(db, "posts", id), { commentsCount: increment(1) })
-    // notify post owner
     if (post) {
       await createNotification({
         targetUserId:   post.userId,
@@ -140,6 +152,7 @@ export default function PostDetailPage({ params }: { params: Promise<{ id: strin
       })
     }
     setText("")
+    setReplyTo(null)
     setSending(false)
     setTimeout(() => bottomRef.current?.scrollIntoView({ behavior: "smooth" }), 100)
   }
@@ -148,8 +161,8 @@ export default function PostDetailPage({ params }: { params: Promise<{ id: strin
     return (
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 animate-pulse">
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          <div className="aspect-square bg-[#E8E4DC] rounded-[18px]" />
-          <div className="bg-[#E8E4DC] rounded-[18px] h-96" />
+          <div className="aspect-square bg-rim rounded-[18px]" />
+          <div className="bg-rim rounded-[18px] h-96" />
         </div>
       </div>
     )
@@ -163,27 +176,27 @@ export default function PostDetailPage({ params }: { params: Promise<{ id: strin
       {/* Geri */}
       <Link
         href="/"
-        className="inline-flex items-center gap-1.5 text-sm text-[#78716C] hover:text-[#1C1917] mb-4 transition-colors font-medium"
+        className="inline-flex items-center gap-1.5 text-sm text-ink-muted hover:text-ink mb-4 transition-colors font-medium"
       >
         <ArrowLeft size={16} />
         Geri
       </Link>
 
       {/* Desktop: yan yana, mobile: üst üste */}
-      <div className="grid grid-cols-1 lg:grid-cols-5 gap-5 lg:gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-5 gap-5 md:gap-6">
         {/* Sol — çizim (3/5) */}
-        <div className="lg:col-span-3">
-          <div className="bg-white border border-[#E8E4DC] rounded-[22px] overflow-hidden shadow-sm sticky top-20">
+        <div className="md:col-span-3">
+          <div className="bg-surface border border-rim rounded-[22px] overflow-hidden shadow-sm md:sticky md:top-20">
             {/* Header */}
             <div className="flex items-center gap-3 px-5 pt-5 pb-3">
               <Link href={`/profile/${post.userId}`}>
                 <Avatar emoji={post.userAvatar} color={post.userColor} size="lg" />
               </Link>
               <div className="flex-1 min-w-0">
-                <Link href={`/profile/${post.userId}`} className="font-semibold text-[#1C1917] hover:underline block">
+                <Link href={`/profile/${post.userId}`} className="font-semibold text-ink hover:underline block">
                   {post.userName}
                 </Link>
-                <p className="text-xs text-[#A8A29E]">{formatRelativeTime(post.createdAt)}</p>
+                <p className="text-xs text-ink-subtle">{formatRelativeTime(post.createdAt)}</p>
               </div>
               <div className="flex items-center gap-2">
                 <span
@@ -193,7 +206,7 @@ export default function PostDetailPage({ params }: { params: Promise<{ id: strin
                   {emotionParts[1] ?? "🎨"} {emotionParts[0]}
                 </span>
                 {post.bpm > 0 && (
-                  <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold bg-[#F5F3EF] text-[#78716C]">
+                  <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold bg-surface-muted text-ink-muted">
                     <Heart size={10} className="fill-[#C45F8A] text-[#C45F8A]" /> {post.bpm}
                   </span>
                 )}
@@ -201,17 +214,17 @@ export default function PostDetailPage({ params }: { params: Promise<{ id: strin
                   <div className="relative">
                     <button
                       onClick={() => setShowMenu(m => !m)}
-                      className="p-1.5 rounded-[8px] text-[#A8A29E] hover:bg-[#F5F3EF] hover:text-[#78716C] transition-colors"
+                      className="p-1.5 rounded-[8px] text-ink-subtle hover:bg-surface-muted hover:text-ink-muted transition-colors"
                     >
                       <MoreHorizontal size={16} />
                     </button>
                     {showMenu && (
                       <>
                         <div className="fixed inset-0 z-10" onClick={() => setShowMenu(false)} />
-                        <div className="absolute right-0 top-8 z-20 bg-white border border-[#E8E4DC] rounded-[14px] shadow-lg py-1 min-w-[160px]">
+                        <div className="absolute right-0 top-8 z-20 bg-surface border border-rim rounded-[14px] shadow-lg py-1 min-w-[160px]">
                           <button
                             onClick={() => { setShowMenu(false); setCaptionDraft(post.caption ?? ""); setEditing(true) }}
-                            className="w-full flex items-center gap-2.5 px-4 py-2.5 text-sm font-medium text-[#1C1917] hover:bg-[#F5F3EF] transition-colors"
+                            className="w-full flex items-center gap-2.5 px-4 py-2.5 text-sm font-medium text-ink hover:bg-surface-muted transition-colors"
                           >
                             <Pencil size={14} />
                             Açıklamayı Düzenle
@@ -252,13 +265,13 @@ export default function PostDetailPage({ params }: { params: Promise<{ id: strin
                 <Heart size={20} className={liked ? "fill-red-500" : ""} />
                 <span>{likes}</span>
               </button>
-              <div className="flex items-center gap-1.5 text-sm font-medium text-[#A8A29E]">
+              <div className="flex items-center gap-1.5 text-sm font-medium text-ink-subtle">
                 <MessageCircle size={20} />
                 <span>{comments.length}</span>
               </div>
               <button
                 onClick={handleShare}
-                className="ml-auto flex items-center gap-1.5 text-sm font-medium text-[#A8A29E] hover:text-[#78716C] transition-colors"
+                className="ml-auto flex items-center gap-1.5 text-sm font-medium text-ink-subtle hover:text-ink-muted transition-colors"
               >
                 <Link2 size={18} />
                 Paylaş
@@ -273,64 +286,79 @@ export default function PostDetailPage({ params }: { params: Promise<{ id: strin
                   onChange={e => setCaptionDraft(e.target.value)}
                   rows={3}
                   autoFocus
-                  className="w-full px-3 py-2 rounded-[12px] bg-[#FAF8F4] border border-[#E8E4DC] text-sm text-[#1C1917] focus:outline-none focus:ring-2 focus:ring-[#D9723F]/20 focus:border-[#D9723F] resize-none transition"
+                  className="w-full px-3 py-2 rounded-[12px] bg-canvas border border-rim text-sm text-ink focus:outline-none focus:ring-2 focus:ring-accent/20 focus:border-accent resize-none transition"
                 />
                 <div className="flex gap-2 justify-end">
-                  <button onClick={() => setEditing(false)} className="flex items-center gap-1 px-3 py-1.5 rounded-full text-xs font-semibold text-[#78716C] bg-[#F5F3EF]">
+                  <button onClick={() => setEditing(false)} className="flex items-center gap-1 px-3 py-1.5 rounded-full text-xs font-semibold text-ink-muted bg-surface-muted">
                     <X size={12} /> İptal
                   </button>
-                  <button onClick={saveCaption} disabled={savingCaption} className="flex items-center gap-1 px-3 py-1.5 rounded-full text-xs font-semibold text-white bg-[#D9723F] disabled:opacity-60">
+                  <button onClick={saveCaption} disabled={savingCaption} className="flex items-center gap-1 px-3 py-1.5 rounded-full text-xs font-semibold text-white bg-accent disabled:opacity-60">
                     <Check size={12} /> {savingCaption ? "Kaydediliyor…" : "Kaydet"}
                   </button>
                 </div>
               </div>
             ) : post.caption ? (
-              <p className="px-5 py-3 text-sm text-[#1C1917] leading-relaxed">{post.caption}</p>
+              <p className="px-5 py-3 text-sm text-ink leading-relaxed">
+                <Caption text={post.caption} />
+              </p>
             ) : null}
           </div>
         </div>
 
         {/* Sağ — yorumlar (2/5) */}
-        <div className="lg:col-span-2">
-          <div className="bg-white border border-[#E8E4DC] rounded-[22px] overflow-hidden shadow-sm lg:sticky lg:top-20 flex flex-col lg:max-h-[calc(100vh-120px)]">
-            <div className="px-5 py-4 border-b border-[#E8E4DC] shrink-0">
-              <h2 className="font-semibold text-[#1C1917]">
+        <div className="md:col-span-2">
+          <div className="bg-surface border border-rim rounded-[22px] overflow-hidden shadow-sm md:sticky md:top-20 flex flex-col md:max-h-[calc(100vh-100px)]">
+            <div className="px-5 py-4 border-b border-rim shrink-0">
+              <h2 className="font-semibold text-ink">
                 Yorumlar{" "}
                 {comments.length > 0 && (
-                  <span className="text-[#A8A29E] font-normal text-sm">({comments.length})</span>
+                  <span className="text-ink-subtle font-normal text-sm">({comments.length})</span>
                 )}
               </h2>
             </div>
 
-            <div className="flex-1 overflow-y-auto divide-y divide-[#F5F3EF]">
+            <div className="flex-1 overflow-y-auto divide-y divide-surface-muted">
               {comments.length === 0 ? (
                 <div className="px-5 py-16 text-center">
                   <span className="text-3xl block mb-2">💬</span>
-                  <p className="text-sm text-[#78716C]">Henüz yorum yok</p>
-                  <p className="text-xs text-[#A8A29E] mt-0.5">İlk sen yaz</p>
+                  <p className="text-sm text-ink-muted">Henüz yorum yok</p>
+                  <p className="text-xs text-ink-subtle mt-0.5">İlk sen yaz</p>
                 </div>
               ) : (
                 comments.map(c => (
                   <div key={c.id} className="flex gap-3 px-5 py-3.5 group">
                     <Avatar emoji={c.userAvatar} color={c.userColor} size="sm" className="mt-0.5 shrink-0" />
                     <div className="min-w-0 flex-1">
-                      <div className="flex items-baseline gap-1.5">
-                        <span className="text-xs font-semibold text-[#1C1917]">{c.userName}</span>
-                        <span className="text-[10px] text-[#A8A29E]">{formatRelativeTime(c.createdAt)}</span>
-                        {/* Delete own comment */}
-                        {user?.uid === c.userId && (
-                          <button
-                            onClick={async () => {
-                              await deleteDoc(doc(db, "posts", id, "comments", c.id))
-                              await updateDoc(doc(db, "posts", id), { commentsCount: increment(-1) })
-                            }}
-                            className="ml-auto opacity-0 group-hover:opacity-100 transition-opacity p-1 rounded text-[#A8A29E] hover:text-red-400"
-                          >
-                            <Trash2 size={11} />
-                          </button>
-                        )}
+                      <div className="flex items-baseline gap-1.5 flex-wrap">
+                        <span className="text-xs font-semibold text-ink">{c.userName}</span>
+                        <span className="text-[10px] text-ink-subtle">{formatRelativeTime(c.createdAt)}</span>
+                        <div className="ml-auto flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                          {/* Reply button */}
+                          {user && (
+                            <button
+                              onClick={() => {
+                                setReplyTo({ id: c.id, name: c.userName })
+                                inputRef.current?.focus()
+                              }}
+                              className="text-[10px] font-medium text-ink-subtle hover:text-accent px-1.5 py-0.5 rounded transition-colors"
+                            >
+                              Yanıtla
+                            </button>
+                          )}
+                          {user?.uid === c.userId && (
+                            <button
+                              onClick={async () => {
+                                await deleteDoc(doc(db, "posts", id, "comments", c.id))
+                                await updateDoc(doc(db, "posts", id), { commentsCount: increment(-1) })
+                              }}
+                              className="p-1 rounded text-ink-subtle hover:text-red-400 transition-colors"
+                            >
+                              <Trash2 size={11} />
+                            </button>
+                          )}
+                        </div>
                       </div>
-                      <p className="text-sm text-[#1C1917] mt-0.5 leading-relaxed break-words">{c.text}</p>
+                      <p className="text-sm text-ink mt-0.5 leading-relaxed break-words">{c.text}</p>
                     </div>
                   </div>
                 ))
@@ -340,28 +368,42 @@ export default function PostDetailPage({ params }: { params: Promise<{ id: strin
 
             {/* Yorum gir */}
             {user && profile ? (
-              <div className="flex items-center gap-3 px-4 py-3 border-t border-[#E8E4DC] shrink-0 bg-[#FAF8F4]/50">
-                <Avatar emoji={profile.avatarEmoji} color={profile.profileColor} size="sm" />
-                <div className="flex-1 flex items-center gap-2 bg-white border border-[#E8E4DC] rounded-full px-4 py-2">
-                  <input
-                    value={text}
-                    onChange={e => setText(e.target.value)}
-                    onKeyDown={e => e.key === "Enter" && sendComment()}
-                    placeholder="Yorum yaz…"
-                    className="flex-1 bg-transparent text-sm text-[#1C1917] placeholder:text-[#A8A29E] focus:outline-none min-w-0"
-                  />
-                  <button
-                    onClick={sendComment}
-                    disabled={!text.trim() || sending}
-                    className="text-[#D9723F] disabled:opacity-30 transition-opacity shrink-0"
-                  >
-                    <Send size={16} />
-                  </button>
+              <div className="border-t border-rim shrink-0 bg-canvas/50">
+                {/* Reply banner */}
+                {replyTo && (
+                  <div className="flex items-center gap-2 px-4 pt-2 pb-0.5">
+                    <span className="text-xs text-ink-muted">
+                      <span className="font-medium text-accent">@{replyTo.name}</span> yanıtlanıyor
+                    </span>
+                    <button onClick={() => setReplyTo(null)} className="ml-auto text-ink-subtle hover:text-ink transition-colors">
+                      <X size={13} />
+                    </button>
+                  </div>
+                )}
+                <div className="flex items-center gap-3 px-4 py-3">
+                  <Avatar emoji={profile.avatarEmoji} color={profile.profileColor} size="sm" />
+                  <div className="flex-1 flex items-center gap-2 bg-surface border border-rim rounded-full px-4 py-2">
+                    <input
+                      ref={inputRef}
+                      value={text}
+                      onChange={e => setText(e.target.value)}
+                      onKeyDown={e => e.key === "Enter" && sendComment()}
+                      placeholder={replyTo ? `@${replyTo.name} yanıtla…` : "Yorum yaz…"}
+                      className="flex-1 bg-transparent text-sm text-ink placeholder:text-ink-subtle focus:outline-none min-w-0"
+                    />
+                    <button
+                      onClick={sendComment}
+                      disabled={!text.trim() || sending}
+                      className="text-accent disabled:opacity-30 transition-opacity shrink-0"
+                    >
+                      <Send size={16} />
+                    </button>
+                  </div>
                 </div>
               </div>
             ) : (
-              <div className="px-5 py-3 border-t border-[#E8E4DC] text-center shrink-0">
-                <Link href="/auth" className="text-sm text-[#D9723F] font-medium hover:underline">
+              <div className="px-5 py-3 border-t border-rim text-center shrink-0">
+                <Link href="/auth" className="text-sm text-accent font-medium hover:underline">
                   Yorum yazmak için giriş yap
                 </Link>
               </div>

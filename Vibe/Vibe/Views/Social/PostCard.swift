@@ -7,6 +7,8 @@ struct PostCard: View {
     var onComment: () -> Void
     var onUserTap: () -> Void
     var onDelete: (() -> Void)? = nil
+    var onReport: (() -> Void)? = nil
+    var onHashtagTap: ((String) -> Void)? = nil
 
     var isOwnPost: Bool { post.userId == currentUserId }
 
@@ -41,21 +43,28 @@ struct PostCard: View {
 
                 Spacer()
 
-                if isOwnPost, let onDelete {
-                    Menu {
+                Menu {
+                    if isOwnPost, let onDelete {
                         Button(role: .destructive) {
                             HapticManager.notification(.warning)
                             onDelete()
                         } label: {
                             Label("Gönderiyi Sil", systemImage: "trash")
                         }
-                    } label: {
-                        Image(systemName: "ellipsis")
-                            .font(.system(size: 15, weight: .medium))
-                            .foregroundColor(.secondary)
-                            .padding(10)
-                            .contentShape(Rectangle())
+                    } else if let onReport {
+                        Button {
+                            HapticManager.impact(.light)
+                            onReport()
+                        } label: {
+                            Label("Şikayet Et", systemImage: "flag")
+                        }
                     }
+                } label: {
+                    Image(systemName: "ellipsis")
+                        .font(.system(size: 15, weight: .medium))
+                        .foregroundColor(.secondary)
+                        .padding(10)
+                        .contentShape(Rectangle())
                 }
             }
             .padding(.horizontal, 14)
@@ -99,7 +108,7 @@ struct PostCard: View {
             .clipShape(Rectangle())
 
             // ── Beğeni + Yorum ─────────────────────────────────
-            HStack(spacing: 18) {
+            HStack(spacing: 4) {
                 likeButton
                 commentButton
                 Spacer()
@@ -112,21 +121,19 @@ struct PostCard: View {
                         .foregroundColor(post.emotion.color)
                 }
                 .padding(.horizontal, 10)
-                .padding(.vertical, 5)
+                .padding(.vertical, 6)
                 .background(post.emotion.color.opacity(0.10))
                 .clipShape(Capsule())
             }
-            .padding(.horizontal, 14)
-            .padding(.vertical, 10)
+            .padding(.horizontal, AppSpacing.md)
+            .padding(.vertical, AppSpacing.sm)
 
             // ── Açıklama ───────────────────────────────────────
             if !post.caption.isEmpty {
                 HStack(alignment: .top, spacing: 5) {
                     Text(post.userDisplayName)
                         .font(.subheadline.weight(.semibold))
-                    Text(post.caption)
-                        .font(.subheadline)
-                        .foregroundColor(.primary.opacity(0.85))
+                    CaptionText(text: post.caption, onHashtagTap: onHashtagTap)
                 }
                 .padding(.horizontal, 14)
                 .padding(.bottom, 14)
@@ -153,6 +160,8 @@ struct PostCard: View {
                     .foregroundColor(post.isLiked ? .red : .secondary)
                     .monospacedDigit()
             }
+            .padding(.vertical, AppSpacing.sm)
+            .padding(.horizontal, AppSpacing.sm)
             .contentShape(Rectangle())
         }
     }
@@ -170,6 +179,8 @@ struct PostCard: View {
                     .foregroundColor(.secondary)
                     .monospacedDigit()
             }
+            .padding(.vertical, AppSpacing.sm)
+            .padding(.horizontal, AppSpacing.sm)
             .contentShape(Rectangle())
         }
     }

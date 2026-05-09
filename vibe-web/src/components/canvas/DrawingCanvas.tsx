@@ -156,10 +156,26 @@ export function DrawingCanvas({ emotion, bpm, bg, onSave, onDiscard }: DrawingCa
   }
 
   const handleSave = async () => {
-    const canvas = canvasRef.current
+    const canvas  = canvasRef.current
+    const overlay = overlayRef.current
     if (!canvas) return
     setSaving(true)
-    await onSave(canvas.toDataURL("image/png"), caption)
+
+    // Overlay (grid/çizgili arka plan) + çizim katmanını birleştir
+    let dataUrl: string
+    if (overlay) {
+      const merged = document.createElement("canvas")
+      merged.width  = canvas.width
+      merged.height = canvas.height
+      const mctx = merged.getContext("2d")!
+      mctx.drawImage(overlay, 0, 0)   // arka plan deseni
+      mctx.drawImage(canvas,  0, 0)   // çizimler
+      dataUrl = merged.toDataURL("image/png")
+    } else {
+      dataUrl = canvas.toDataURL("image/png")
+    }
+
+    await onSave(dataUrl, caption)
     setSaving(false)
     setShowSave(false)
   }
@@ -169,16 +185,16 @@ export function DrawingCanvas({ emotion, bpm, bg, onSave, onDiscard }: DrawingCa
   return (
     <div className="flex flex-col h-[calc(100vh-56px)]">
       {/* Top bar */}
-      <div className="flex items-center justify-between px-4 py-2 bg-white border-b border-[#E8E4DC] gap-3">
+      <div className="flex items-center justify-between px-4 py-2 bg-surface border-b border-rim gap-3">
         <div className="flex items-center gap-2.5 min-w-0">
           <span className="text-xl shrink-0">{emotion.emoji}</span>
           <div className="min-w-0">
-            <p className="text-sm font-semibold text-[#1C1917] leading-tight truncate">{emotion.label}</p>
-            <p className="text-xs text-[#A8A29E]">{bpm} BPM · {bgLabel}</p>
+            <p className="text-sm font-semibold text-ink leading-tight truncate">{emotion.label}</p>
+            <p className="text-xs text-ink-subtle">{bpm} BPM · {bgLabel}</p>
           </div>
         </div>
         <div className="flex items-center gap-1.5 shrink-0">
-          <div className="flex items-center gap-0.5 bg-[#F5F3EF] rounded-[12px] p-1">
+          <div className="flex items-center gap-0.5 bg-surface-muted rounded-[12px] p-1">
             <ToolButton onClick={undo} label="Geri Al"><Undo2 size={16} /></ToolButton>
             <ToolButton onClick={clear} label="Temizle"><Trash2 size={16} /></ToolButton>
             <ToolButton onClick={download} label="İndir"><Download size={16} /></ToolButton>
@@ -213,8 +229,8 @@ export function DrawingCanvas({ emotion, bpm, bg, onSave, onDiscard }: DrawingCa
       </div>
 
       {/* Bottom bar */}
-      <div className="px-4 py-2.5 bg-white border-t border-[#E8E4DC] flex items-center justify-between">
-        <button onClick={onDiscard} className="text-sm text-[#A8A29E] hover:text-[#78716C] transition-colors font-medium">
+      <div className="px-4 py-2.5 bg-surface border-t border-rim flex items-center justify-between">
+        <button onClick={onDiscard} className="text-sm text-ink-subtle hover:text-ink-muted transition-colors font-medium">
           Vazgeç
         </button>
         <div className="flex items-center gap-1.5">
@@ -227,32 +243,32 @@ export function DrawingCanvas({ emotion, bpm, bg, onSave, onDiscard }: DrawingCa
       {/* Save modal */}
       {showSave && (
         <div className="fixed inset-0 bg-black/40 backdrop-blur-sm z-50 flex items-end sm:items-center justify-center p-4">
-          <div className="bg-white rounded-[22px] w-full max-w-sm shadow-xl">
+          <div className="bg-surface rounded-[22px] w-full max-w-sm shadow-xl">
             <div className="flex items-center justify-between px-6 pt-5 pb-2">
               <div>
-                <h2 className="font-bold text-[#1C1917] text-lg">Çizimi Paylaş</h2>
-                <p className="text-sm text-[#A8A29E] mt-0.5">Feed&apos;e eklenecek</p>
+                <h2 className="font-bold text-ink text-lg">Çizimi Paylaş</h2>
+                <p className="text-sm text-ink-subtle mt-0.5">Feed&apos;e eklenecek</p>
               </div>
-              <button onClick={() => setShowSave(false)} className="p-2 rounded-[10px] text-[#A8A29E] hover:bg-[#F5F3EF]">
+              <button onClick={() => setShowSave(false)} className="p-2 rounded-[10px] text-ink-subtle hover:bg-surface-muted">
                 <X size={18} />
               </button>
             </div>
             <div className="px-6 pb-6 pt-2">
-              <div className="flex items-center gap-2 mb-4 p-3 bg-[#F5F3EF] rounded-[14px]">
+              <div className="flex items-center gap-2 mb-4 p-3 bg-surface-muted rounded-[14px]">
                 <span className="text-xl">{emotion.emoji}</span>
                 <div>
-                  <p className="text-sm font-medium text-[#1C1917]">{emotion.label} · {bgLabel}</p>
-                  <p className="text-xs text-[#A8A29E]">{bpm} BPM</p>
+                  <p className="text-sm font-medium text-ink">{emotion.label} · {bgLabel}</p>
+                  <p className="text-xs text-ink-subtle">{bpm} BPM</p>
                 </div>
               </div>
               <textarea
                 value={caption} onChange={e => setCaption(e.target.value)}
                 placeholder="Bir şeyler yaz… (isteğe bağlı)" rows={3}
-                className="w-full px-4 py-3 rounded-[14px] bg-[#FAF8F4] border border-[#E8E4DC] text-sm text-[#1C1917] placeholder:text-[#A8A29E] focus:outline-none focus:ring-2 focus:ring-[#D9723F]/20 focus:border-[#D9723F] resize-none mb-4 transition"
+                className="w-full px-4 py-3 rounded-[14px] bg-canvas border border-rim text-sm text-ink placeholder:text-ink-subtle focus:outline-none focus:ring-2 focus:ring-accent/20 focus:border-accent resize-none mb-4 transition"
               />
               <div className="flex gap-2">
                 <button onClick={() => setShowSave(false)}
-                  className="flex-1 py-3 rounded-[14px] text-sm font-semibold text-[#78716C] bg-[#F5F3EF] hover:bg-[#EDE9E3] transition-colors">
+                  className="flex-1 py-3 rounded-[14px] text-sm font-semibold text-ink-muted bg-surface-muted hover:bg-[#EDE9E3] transition-colors">
                   İptal
                 </button>
                 <button onClick={handleSave} disabled={saving}
@@ -272,7 +288,7 @@ export function DrawingCanvas({ emotion, bpm, bg, onSave, onDiscard }: DrawingCa
 function ToolButton({ onClick, label, children }: { onClick: () => void; label: string; children: React.ReactNode }) {
   return (
     <button onClick={onClick} title={label}
-      className="p-2 rounded-[9px] text-[#78716C] hover:bg-white hover:text-[#1C1917] hover:shadow-sm transition-all active:scale-90">
+      className="p-2 rounded-[9px] text-ink-muted hover:bg-surface hover:text-ink hover:shadow-sm transition-all active:scale-90">
       {children}
     </button>
   )

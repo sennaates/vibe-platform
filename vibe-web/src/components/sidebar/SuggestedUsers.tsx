@@ -79,10 +79,10 @@ export function SuggestedUsers() {
   }
 
   return (
-    <div className="bg-white border border-[#E8E4DC] rounded-[22px] p-5 shadow-sm">
+    <div className="bg-surface border border-rim rounded-[22px] p-5 shadow-sm">
       <div className="flex items-center gap-2 mb-4">
-        <Users size={15} className="text-[#D9723F]" />
-        <p className="text-xs font-semibold text-[#A8A29E] uppercase tracking-widest">Tanıyor Olabilirsin</p>
+        <Users size={15} className="text-accent" />
+        <p className="text-xs font-semibold text-ink-subtle uppercase tracking-widest">Tanıyor Olabilirsin</p>
       </div>
       <div className="space-y-3">
         {suggestions.map(u => {
@@ -93,32 +93,32 @@ export function SuggestedUsers() {
                 <Avatar emoji={u.avatarEmoji} color={u.profileColor} size="sm" />
               </Link>
               <div className="flex-1 min-w-0">
-                <Link href={`/profile/${u.uid}`} className="text-xs font-semibold text-[#1C1917] hover:underline truncate block">
+                <Link href={`/profile/${u.uid}`} className="text-xs font-semibold text-ink hover:underline truncate block">
                   {u.displayName}
                 </Link>
-                <p className="text-[10px] text-[#A8A29E]">{u.postsCount} çizim</p>
+                <p className="text-[10px] text-ink-subtle">{u.postsCount} çizim</p>
               </div>
               <button
                 onClick={() => toggleFollow(u.uid)}
                 disabled={u.followLoading}
-                className="flex items-center gap-1 px-2.5 py-1 rounded-full text-[10px] font-semibold shrink-0 transition-all disabled:opacity-60"
+                className="flex items-center gap-1 px-3 py-1.5 min-h-[32px] rounded-full text-xs font-semibold shrink-0 transition-all disabled:opacity-60"
                 style={u.isFollowing
                   ? { backgroundColor: "#F5F3EF", color: "#78716C", border: "1px solid #E8E4DC" }
                   : { backgroundColor: accent + "18", color: accent, border: `1px solid ${accent}30` }
                 }
               >
                 {u.followLoading
-                  ? <Loader2 size={10} className="animate-spin" />
+                  ? <Loader2 size={11} className="animate-spin" />
                   : u.isFollowing
-                    ? <><UserCheck size={10} />Takipte</>
-                    : <><UserPlus size={10} />Takip</>
+                    ? <><UserCheck size={11} />Takipte</>
+                    : <><UserPlus size={11} />Takip</>
                 }
               </button>
             </div>
           )
         })}
       </div>
-      <Link href="/search" className="block mt-4 text-center text-xs text-[#D9723F] hover:underline font-medium">
+      <Link href="/search" className="block mt-4 text-center text-xs text-accent hover:underline font-medium">
         Daha fazla kullanıcı bul →
       </Link>
     </div>

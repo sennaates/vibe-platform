@@ -2,61 +2,134 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
 
-    // ── Yardımcı fonksiyonlar ──────────────────────────────────────
-    function isLoggedIn() {
+    // ── Yardımcı fonksiyonlar ──────────────────────────────────────────────
+    function isAuth() {
       return request.auth != null;
     }
+
     function isOwner(uid) {
-      return request.auth.uid == uid;
+      return isAuth() && request.auth.uid == uid;
     }
 
-    // ── Kullanıcılar ───────────────────────────────────────────────
-    match /users/{userId} {
-      allow read: if isLoggedIn();
-      allow create: if isOwner(userId);
-      allow update: if isOwner(userId)
-                    && !request.resource.data.diff(resource.data).affectedKeys()
-                       .hasAny(['followerCount', 'followingCount', 'postCount']);
+    // Sadece sayaç alanlarının değiştiğini doğrular
+    // (web: followersCount/followingCount/postsCount, ios: followerCount/followingCount/postCount)
+    function onlyCounterFields() {
+      return request.resource.data.diff(resource.data).affectedKeys()
+        .hasOnly([
+          'followersCount', 'followingCount', 'postsCount',
+          'followerCount',  'postCount'
+        ]);
     }
 
-    // ── Gönderiler ─────────────────────────────────────────────────
+    // Post counter alanları (like/comment sayıları)
+    function onlyPostCounters() {
+      return request.resource.data.diff(resource.data).affectedKeys()
+        .hasOnly(['likesCount', 'commentsCount', 'likeCount', 'commentCount']);
+    }
+
+
+    // ── Kullanıcılar ────────────────────────────────────────────────────────
+    // Profiller herkese açık okunabilir (arama, profil sayfası)
+    // Güncelleme: ya sahibi (profil düzenleme) ya da başka biri sadece sayaç değiştirebilir
+    match /users/{uid} {
+      allow read: if true;
+      allow create: if isOwner(uid);
+      allow update: if isOwner(uid) || (isAuth() && onlyCounterFields());
+      allow delete: if isOwner(uid);
+    }
+
+
+    // ── Gönderiler ──────────────────────────────────────────────────────────
     match /posts/{postId} {
-      allow read: if isLoggedIn();
-      allow create: if isLoggedIn()
-                    && request.resource.data.userId == request.auth.uid;
-      allow delete: if isLoggedIn()
-                    && resource.data.userId == request.auth.uid;
-      // likeCount / commentCount güncellemelerini allow et, sahip değiştirmeyi değil
-      allow update: if isLoggedIn()
-                    && !request.resource.data.diff(resource.data).affectedKeys()
-                       .hasAny(['userId', 'imageURL']);
+      allow read: if true;
 
-      // Yorumlar alt koleksiyonu
+      allow create: if isAuth()
+        && request.resource.data.userId == request.auth.uid;
+
+      // Sahip: tüm alanları güncelleyebilir (caption düzenleme dahil)
+      // Diğerleri: yalnızca like/comment sayaçlarını artırabilir
+      allow update: if isAuth() && (
+        resource.data.userId == request.auth.uid
+        || onlyPostCounters()
+      );
+
+      allow delete: if isAuth()
+        && resource.data.userId == request.auth.uid;
+
+
+      // ── Yorumlar (alt koleksiyon) ─────────────────────────────────────────
       match /comments/{commentId} {
-        allow read: if isLoggedIn();
-        allow create: if isLoggedIn()
-                      && request.resource.data.userId == request.auth.uid;
-        allow delete: if isLoggedIn()
-                      && resource.data.userId == request.auth.uid;
+        allow read: if true;
+
+        allow create: if isAuth()
+          && request.resource.data.userId == request.auth.uid;
+
+        // Yorum sahibi veya gönderi sahibi silebilir
+        allow delete: if isAuth() && (
+          resource.data.userId == request.auth.uid
+          || get(/databases/$(database)/documents/posts/$(postId)).data.userId == request.auth.uid
+        );
+
+        allow update: if false; // Yorumlar düzenlenemez
+      }
+
+
+      // ── Gönderi beğenileri (web: posts/{postId}/likes/{uid}) ─────────────
+      match /likes/{uid} {
+        allow read: if isAuth();
+        allow write: if isOwner(uid);
       }
     }
 
-    // ── Beğeniler ──────────────────────────────────────────────────
+
+    // ── Düz beğeni koleksiyonu (iOS: likes/{userId}_{postId}) ──────────────
     match /likes/{likeId} {
-      allow read: if isLoggedIn();
-      allow write: if isLoggedIn()
-                   && request.auth.uid == resource.data.userId
-                      || (request.method == 'create'
-                          && request.resource.data.userId == request.auth.uid);
+      allow read: if isAuth();
+      allow create: if isAuth()
+        && request.resource.data.userId == request.auth.uid;
+      allow delete: if isAuth()
+        && resource.data.userId == request.auth.uid;
+      allow update: if false;
     }
 
-    // ── Takipler ───────────────────────────────────────────────────
+
+    // ── Takipler ────────────────────────────────────────────────────────────
+    // followId = "{followerId}_{followedId}" formatında
     match /follows/{followId} {
-      allow read: if isLoggedIn();
-      allow create: if isLoggedIn()
-                    && request.resource.data.followerId == request.auth.uid;
-      allow delete: if isLoggedIn()
-                    && resource.data.followerId == request.auth.uid;
+      allow read: if isAuth();
+      allow create: if isAuth()
+        && request.resource.data.followerId == request.auth.uid;
+      allow delete: if isAuth()
+        && resource.data.followerId == request.auth.uid;
+      allow update: if false;
+    }
+
+
+    // ── Kullanıcı beğeni listesi (web çift yazma) ───────────────────────────
+    // Yalnızca kendi beğeni listene erişebilirsin
+    match /userLikes/{uid}/items/{postId} {
+      allow read, write: if isOwner(uid);
+    }
+
+
+    // ── Şikayetler ──────────────────────────────────────────────────────────
+    // Herhangi bir oturum açmış kullanıcı şikayet oluşturabilir;
+    // okuma/silme yalnızca admin tarafından yapılır (client'tan erişilemez)
+    match /reports/{reportId} {
+      allow create: if isAuth()
+        && request.resource.data.reportedBy == request.auth.uid;
+      allow read, update, delete: if false;
+    }
+
+
+    // ── Bildirimler ─────────────────────────────────────────────────────────
+    // Okuma/güncelleme/silme: yalnızca hedef kullanıcı
+    // Oluşturma: herhangi bir oturum açmış kullanıcı (bildirim gönderebilir)
+    match /notifications/{userId}/items/{notifId} {
+      allow read:   if isOwner(userId);
+      allow create: if isAuth();
+      allow update: if isOwner(userId); // okundu işareti
+      allow delete: if isOwner(userId);
     }
   }
 }

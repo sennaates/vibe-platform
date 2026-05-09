@@ -8,10 +8,14 @@ class FeedService: ObservableObject {
     @Published var discoverPosts: [Post] = []
     @Published var feedPosts: [Post] = []
     @Published var isLoading = false
+    @Published var isLoadingMore = false
+    @Published var hasMoreDiscover = true
 
     private let db = Firestore.firestore()
     private var discoverListener: ListenerRegistration?
     private var feedListener: ListenerRegistration?
+    private var lastDiscoverDoc: DocumentSnapshot? = nil
+    private let pageSize = 20
 
     // MARK: - Cloudinary Ayarları
     // Cloudinary dashboard'dan alınan değerleri buraya gir
@@ -23,17 +27,45 @@ class FeedService: ObservableObject {
     func startDiscoverListener(currentUserId: String) {
         discoverListener?.remove()
         isLoading = true
+        lastDiscoverDoc = nil
+        hasMoreDiscover = true
         discoverListener = db.collection("posts")
             .order(by: "createdAt", descending: true)
-            .limit(to: 50)
+            .limit(to: Int64(pageSize))
             .addSnapshotListener { [weak self] snapshot, _ in
-                guard let self else { return }
-                var posts = snapshot?.documents.compactMap {
+                guard let self, let snap = snapshot else { return }
+                self.lastDiscoverDoc = snap.documents.last
+                self.hasMoreDiscover = snap.documents.count == self.pageSize
+                var posts = snap.documents.compactMap {
                     Post.from($0.data(), id: $0.documentID)
-                } ?? []
+                }
                 self.enrichWithLikes(posts: &posts, userId: currentUserId) { enriched in
                     self.discoverPosts = enriched
                     self.isLoading = false
+                }
+            }
+    }
+
+    func loadMoreDiscover(currentUserId: String) {
+        guard !isLoadingMore, hasMoreDiscover, let lastDoc = lastDiscoverDoc else { return }
+        isLoadingMore = true
+        db.collection("posts")
+            .order(by: "createdAt", descending: true)
+            .start(afterDocument: lastDoc)
+            .limit(to: Int64(pageSize))
+            .getDocuments { [weak self] snapshot, _ in
+                guard let self, let snap = snapshot else {
+                    self?.isLoadingMore = false
+                    return
+                }
+                self.lastDiscoverDoc = snap.documents.last ?? self.lastDiscoverDoc
+                self.hasMoreDiscover = snap.documents.count == self.pageSize
+                var newPosts = snap.documents.compactMap {
+                    Post.from($0.data(), id: $0.documentID)
+                }
+                self.enrichWithLikes(posts: &newPosts, userId: currentUserId) { enriched in
+                    self.discoverPosts.append(contentsOf: enriched)
+                    self.isLoadingMore = false
                 }
             }
     }

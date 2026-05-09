@@ -52,14 +52,14 @@ export default function GalleryPage() {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
         <div className="flex items-center justify-between mb-6 animate-pulse">
           <div>
-            <div className="h-6 w-24 bg-[#E8E4DC] rounded-full mb-2" />
-            <div className="h-3.5 w-16 bg-[#E8E4DC] rounded-full" />
+            <div className="h-6 w-24 bg-rim rounded-full mb-2" />
+            <div className="h-3.5 w-16 bg-rim rounded-full" />
           </div>
-          <div className="h-9 w-28 bg-[#E8E4DC] rounded-[12px]" />
+          <div className="h-9 w-28 bg-rim rounded-[12px]" />
         </div>
         <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-2 animate-pulse">
           {[...Array(12)].map((_, i) => (
-            <div key={i} className="aspect-square bg-[#E8E4DC] rounded-[14px]" />
+            <div key={i} className="aspect-square bg-rim rounded-[14px]" />
           ))}
         </div>
       </div>
@@ -70,9 +70,9 @@ export default function GalleryPage() {
     return (
       <div className="flex flex-col items-center justify-center min-h-[calc(100vh-56px)] gap-4 px-4">
         <span className="text-6xl block">🖼️</span>
-        <p className="text-xl font-bold text-[#1C1917]">Galeriyi görmek için giriş yap</p>
-        <p className="text-sm text-[#78716C]">Çizimlerini burada sakla ve paylaş</p>
-        <Link href="/auth" className="mt-3 px-6 py-3 bg-[#D9723F] text-white rounded-[14px] text-sm font-semibold shadow-sm hover:bg-[#C4622F] transition-colors">
+        <p className="text-xl font-bold text-ink">Galeriyi görmek için giriş yap</p>
+        <p className="text-sm text-ink-muted">Çizimlerini burada sakla ve paylaş</p>
+        <Link href="/auth" className="mt-3 px-6 py-3 bg-accent text-white rounded-[14px] text-sm font-semibold shadow-sm hover:bg-accent-hover transition-colors">
           Giriş Yap
         </Link>
       </div>
@@ -84,15 +84,15 @@ export default function GalleryPage() {
       {/* Header */}
       <div className="flex items-center justify-between mb-5">
         <div>
-          <p className="text-xs font-semibold text-[#A8A29E] uppercase tracking-widest mb-0.5">Koleksiyon</p>
-          <h1 className="text-2xl sm:text-3xl font-bold text-[#1C1917]">Galeri</h1>
-          <p className="text-sm text-[#78716C] mt-0.5">
+          <p className="text-xs font-semibold text-ink-subtle uppercase tracking-widest mb-0.5">Koleksiyon</p>
+          <h1 className="text-2xl sm:text-3xl font-bold text-ink">Galeri</h1>
+          <p className="text-sm text-ink-muted mt-0.5">
             {filtered.length}{filtered.length !== posts.length ? `/${posts.length}` : ""} çizim
           </p>
         </div>
         <Link
           href="/canvas"
-          className="flex items-center gap-1.5 px-5 py-2.5 bg-[#D9723F] text-white rounded-[14px] text-sm font-semibold shadow-sm hover:bg-[#C4622F] transition-all active:scale-95"
+          className="flex items-center gap-1.5 px-5 py-2.5 bg-accent text-white rounded-[14px] text-sm font-semibold shadow-sm hover:bg-accent-hover transition-all active:scale-95"
         >
           <Plus size={16} strokeWidth={2.5} />
           Yeni Çizim
@@ -120,17 +120,17 @@ export default function GalleryPage() {
       {posts.length === 0 ? (
         <div className="flex flex-col items-center py-24 text-center gap-3">
           <span className="text-6xl block">🎨</span>
-          <p className="font-bold text-[#1C1917] text-xl">Henüz çizim yok</p>
-          <p className="text-sm text-[#78716C]">İlk çizimini yap ve galerine ekle</p>
-          <Link href="/canvas" className="mt-4 px-6 py-3 bg-[#D9723F] text-white rounded-[14px] text-sm font-semibold shadow-sm hover:bg-[#C4622F] transition-colors">
+          <p className="font-bold text-ink text-xl">Henüz çizim yok</p>
+          <p className="text-sm text-ink-muted">İlk çizimini yap ve galerine ekle</p>
+          <Link href="/canvas" className="mt-4 px-6 py-3 bg-accent text-white rounded-[14px] text-sm font-semibold shadow-sm hover:bg-accent-hover transition-colors">
             Çizmeye Başla
           </Link>
         </div>
       ) : filtered.length === 0 ? (
         <div className="flex flex-col items-center py-24 text-center gap-3">
           <span className="text-5xl block">🔍</span>
-          <p className="font-semibold text-[#78716C]">Bu duyguyla çizim yok</p>
-          <button onClick={() => setActive("all")} className="text-sm text-[#D9723F] hover:underline">
+          <p className="font-semibold text-ink-muted">Bu duyguyla çizim yok</p>
+          <button onClick={() => setActive("all")} className="text-sm text-accent hover:underline">
             Tümünü göster
           </button>
         </div>
@@ -142,7 +142,7 @@ export default function GalleryPage() {
               <Link
                 key={post.id}
                 href={`/post/${post.id}`}
-                className="aspect-square relative rounded-[14px] overflow-hidden bg-[#F5F3EF] group shadow-sm hover:shadow-md transition-shadow"
+                className="aspect-square relative rounded-[14px] overflow-hidden bg-surface-muted group shadow-sm hover:shadow-md transition-shadow"
               >
                 {post.imageUrl ? (
                   <Image
@@ -182,8 +182,8 @@ function FilterChip({ active, onClick, children }: {
       className={cn(
         "flex-shrink-0 flex items-center gap-1 px-3.5 py-1.5 rounded-full text-xs font-semibold transition-all duration-150 border whitespace-nowrap",
         active
-          ? "bg-[#D9723F] text-white border-[#D9723F] shadow-sm"
-          : "bg-white text-[#78716C] border-[#E8E4DC] hover:border-[#D9723F]/40 hover:text-[#1C1917]"
+          ? "bg-accent text-white border-[#D9723F] shadow-sm"
+          : "bg-surface text-ink-muted border-rim hover:border-[#D9723F]/40 hover:text-ink"
       )}
     >
       {children}

@@ -11,6 +11,12 @@ export interface SocialUser {
   followingCount: number
   postsCount: number
   createdAt: Timestamp
+  // notification preferences (default true if absent)
+  notifFollows?: boolean
+  notifLikes?: boolean
+  notifComments?: boolean
+  // privacy
+  isPrivate?: boolean
 }
 
 export interface Post {
@@ -23,6 +29,7 @@ export interface Post {
   emotion: string
   bpm: number
   caption: string
+  tags?: string[]
   likesCount: number
   commentsCount: number
   createdAt: Timestamp

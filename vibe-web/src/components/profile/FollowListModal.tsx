@@ -44,27 +44,27 @@ export function FollowListModal({ uid, mode, onClose }: FollowListModalProps) {
 
   return (
     <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-4 bg-black/40 backdrop-blur-sm">
-      <div className="bg-white rounded-[22px] w-full max-w-sm shadow-xl overflow-hidden">
+      <div className="bg-surface rounded-[22px] w-full max-w-sm shadow-xl overflow-hidden">
         {/* Header */}
-        <div className="flex items-center justify-between px-5 py-4 border-b border-[#E8E4DC]">
-          <h2 className="font-bold text-[#1C1917]">
+        <div className="flex items-center justify-between px-5 py-4 border-b border-rim">
+          <h2 className="font-bold text-ink">
             {mode === "followers" ? "Takipçiler" : "Takip Edilenler"}
           </h2>
-          <button onClick={onClose} className="p-1.5 rounded-[8px] text-[#A8A29E] hover:bg-[#F5F3EF]">
+          <button onClick={onClose} className="p-1.5 rounded-[8px] text-ink-subtle hover:bg-surface-muted">
             <X size={18} />
           </button>
         </div>
 
         {/* List */}
-        <div className="max-h-[60vh] overflow-y-auto divide-y divide-[#F5F3EF]">
+        <div className="max-h-[60vh] overflow-y-auto divide-y divide-surface-muted">
           {loading ? (
             <div className="flex items-center justify-center py-16">
-              <Loader2 size={24} className="animate-spin text-[#A8A29E]" />
+              <Loader2 size={24} className="animate-spin text-ink-subtle" />
             </div>
           ) : users.length === 0 ? (
             <div className="flex flex-col items-center py-16 text-center gap-2">
               <span className="text-4xl">👥</span>
-              <p className="text-sm text-[#78716C]">
+              <p className="text-sm text-ink-muted">
                 {mode === "followers" ? "Henüz takipçi yok" : "Henüz kimse takip edilmiyor"}
               </p>
             </div>
@@ -74,12 +74,12 @@ export function FollowListModal({ uid, mode, onClose }: FollowListModalProps) {
                 key={u.uid}
                 href={`/profile/${u.uid}`}
                 onClick={onClose}
-                className="flex items-center gap-3 px-5 py-3.5 hover:bg-[#FAF8F4] transition-colors"
+                className="flex items-center gap-3 px-5 py-3.5 hover:bg-canvas transition-colors"
               >
                 <Avatar emoji={u.avatarEmoji} color={u.profileColor} size="md" />
                 <div className="flex-1 min-w-0">
-                  <p className="font-semibold text-[#1C1917] text-sm truncate">{u.displayName}</p>
-                  <p className="text-xs text-[#A8A29E] mt-0.5">
+                  <p className="font-semibold text-ink text-sm truncate">{u.displayName}</p>
+                  <p className="text-xs text-ink-subtle mt-0.5">
                     {u.postsCount} çizim
                   </p>
                 </div>
