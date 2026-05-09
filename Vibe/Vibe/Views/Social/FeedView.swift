@@ -1,5 +1,10 @@
 import SwiftUI
 
+struct HashtagNavItem: Identifiable, Hashable {
+    let id = UUID()
+    let tag: String
+}
+
 struct FeedView: View {
     @EnvironmentObject var authService: AuthService
     @Environment(\.horizontalSizeClass) private var sizeClass
@@ -8,6 +13,9 @@ struct FeedView: View {
     @State private var selectedPost: Post? = nil
     @State private var profileUserId: String? = nil
     @State private var isShowingProfile = false
+    @State private var reportedPostId: String? = nil
+    @State private var showReportConfirm = false
+    @State private var hashtagNavTag: HashtagNavItem? = nil
 
     var body: some View {
         NavigationStack {
@@ -39,7 +47,14 @@ struct FeedView: View {
                                             profileUserId = post.userId
                                             isShowingProfile = true
                                         },
-                                        onDelete: { deletePost(post) }
+                                        onDelete: { deletePost(post) },
+                                        onReport: {
+                                            reportedPostId = post.id
+                                            showReportConfirm = true
+                                        },
+                                        onHashtagTap: { tag in
+                                            hashtagNavTag = HashtagNavItem(tag: tag)
+                                        }
                                     )
                                     .padding(.horizontal, sizeClass == .regular ? AppSpacing.xxl : AppSpacing.md)
                                     .frame(maxWidth: sizeClass == .regular ? 680 : .infinity)
@@ -66,6 +81,20 @@ struct FeedView: View {
             }
             .onAppear { startListening() }
             .onDisappear { feedService.stopListeners() }
+            .alert("Şikayet Et", isPresented: $showReportConfirm) {
+                Button("İptal", role: .cancel) {}
+                Button("Şikayet Gönder", role: .destructive) {
+                    if let pid = reportedPostId {
+                        reportPost(postId: pid)
+                    }
+                }
+            } message: {
+                Text("Bu gönderi uygunsuz içerik barındırıyor mu? Şikayetiniz incelenecektir.")
+            }
+            .navigationDestination(item: $hashtagNavTag) { item in
+                HashtagFeedView(tag: item.tag)
+                    .environmentObject(authService)
+            }
         }
     }
 
@@ -144,5 +173,10 @@ struct FeedView: View {
 
     private func deletePost(_ post: Post) {
         SocialService.shared.deletePost(post) { _ in }
+    }
+
+    private func reportPost(postId: String) {
+        guard let uid = authService.firebaseUser?.uid else { return }
+        SocialService.shared.reportPost(postId: postId, reportedBy: uid) { _ in }
     }
 }

@@ -7,6 +7,8 @@ struct PostCard: View {
     var onComment: () -> Void
     var onUserTap: () -> Void
     var onDelete: (() -> Void)? = nil
+    var onReport: (() -> Void)? = nil
+    var onHashtagTap: ((String) -> Void)? = nil
 
     var isOwnPost: Bool { post.userId == currentUserId }
 
@@ -41,21 +43,28 @@ struct PostCard: View {
 
                 Spacer()
 
-                if isOwnPost, let onDelete {
-                    Menu {
+                Menu {
+                    if isOwnPost, let onDelete {
                         Button(role: .destructive) {
                             HapticManager.notification(.warning)
                             onDelete()
                         } label: {
                             Label("Gönderiyi Sil", systemImage: "trash")
                         }
-                    } label: {
-                        Image(systemName: "ellipsis")
-                            .font(.system(size: 15, weight: .medium))
-                            .foregroundColor(.secondary)
-                            .padding(10)
-                            .contentShape(Rectangle())
+                    } else if let onReport {
+                        Button {
+                            HapticManager.impact(.light)
+                            onReport()
+                        } label: {
+                            Label("Şikayet Et", systemImage: "flag")
+                        }
                     }
+                } label: {
+                    Image(systemName: "ellipsis")
+                        .font(.system(size: 15, weight: .medium))
+                        .foregroundColor(.secondary)
+                        .padding(10)
+                        .contentShape(Rectangle())
                 }
             }
             .padding(.horizontal, 14)
@@ -124,9 +133,7 @@ struct PostCard: View {
                 HStack(alignment: .top, spacing: 5) {
                     Text(post.userDisplayName)
                         .font(.subheadline.weight(.semibold))
-                    Text(post.caption)
-                        .font(.subheadline)
-                        .foregroundColor(.primary.opacity(0.85))
+                    CaptionText(text: post.caption, onHashtagTap: onHashtagTap)
                 }
                 .padding(.horizontal, 14)
                 .padding(.bottom, 14)

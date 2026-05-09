@@ -12,6 +12,7 @@ struct PostDetailView: View {
     @State private var newComment = ""
     @State private var isLoadingComments = true
     @State private var commentListener: ListenerRegistration? = nil
+    @State private var hashtagNavTag: HashtagNavItem? = nil
     @FocusState private var commentFocused: Bool
 
     var body: some View {
@@ -24,8 +25,13 @@ struct PostDetailView: View {
                     onLike: onLike,
                     onComment: { commentFocused = true },
                     onUserTap: {},
-                    onDelete: onDelete.map { del in { del(); dismiss() } }
+                    onDelete: onDelete.map { del in { del(); dismiss() } },
+                    onHashtagTap: { tag in hashtagNavTag = HashtagNavItem(tag: tag) }
                 )
+                .navigationDestination(item: $hashtagNavTag) { item in
+                    HashtagFeedView(tag: item.tag)
+                        .environmentObject(authService)
+                }
                 .padding(.horizontal, AppSpacing.md)
                 .padding(.top, AppSpacing.md)
 

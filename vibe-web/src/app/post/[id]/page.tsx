@@ -105,8 +105,14 @@ export default function PostDetailPage({ params }: { params: Promise<{ id: strin
   async function saveCaption() {
     if (!post) return
     setSavingCaption(true)
-    await updateDoc(doc(db, "posts", id), { caption: captionDraft.trim() })
-    setPost(p => p ? { ...p, caption: captionDraft.trim() } : p)
+    const trimmed = captionDraft.trim()
+    // Extract hashtags from new caption
+    const tags = [...trimmed.matchAll(/#([\wÀ-ɏЀ-ӿ]+)/g)].map(m => m[1].toLowerCase())
+    await updateDoc(doc(db, "posts", id), {
+      caption: trimmed,
+      ...(tags.length > 0 ? { tags } : { tags: [] }),
+    })
+    setPost(p => p ? { ...p, caption: trimmed, tags } : p)
     setEditing(false)
     setSavingCaption(false)
     toast.success("Açıklama güncellendi")

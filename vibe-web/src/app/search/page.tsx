@@ -26,7 +26,14 @@ export default function SearchPage() {
   const [isPending, startTransition] = useTransition()
 
   async function doSearch(value: string) {
-    if (!value.trim()) { setResults([]); setSearched(false); return }
+    const trimmed = value.trim()
+    if (!trimmed) { setResults([]); setSearched(false); return }
+
+    // If starts with #, navigate to hashtag page
+    if (trimmed.startsWith("#") && trimmed.length > 1) {
+      router.push(`/hashtag/${trimmed.slice(1).toLowerCase()}`)
+      return
+    }
 
     startTransition(async () => {
       const q = query(
@@ -99,7 +106,7 @@ export default function SearchPage() {
           type="text"
           value={term}
           onChange={e => { setTerm(e.target.value); doSearch(e.target.value) }}
-          placeholder="İsim ile ara…"
+          placeholder="İsim veya #hashtag ara…"
           className="w-full pl-11 pr-4 py-3 rounded-[16px] bg-surface border border-rim text-sm text-ink placeholder:text-ink-subtle focus:outline-none focus:ring-2 focus:ring-accent/20 focus:border-accent shadow-sm transition"
         />
         {isPending && (

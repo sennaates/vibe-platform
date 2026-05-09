@@ -6,6 +6,7 @@ import Image from "next/image"
 import { Feed } from "@/components/feed/Feed"
 import { FollowingFeed } from "@/components/feed/FollowingFeed"
 import { TrendingEmotions } from "@/components/sidebar/TrendingEmotions"
+import { TrendingHashtags } from "@/components/sidebar/TrendingHashtags"
 import { SuggestedUsers } from "@/components/sidebar/SuggestedUsers"
 import { useAuth } from "@/hooks/useAuth"
 import { Compass, Users } from "lucide-react"
@@ -84,6 +85,7 @@ export default function HomePage() {
           {/* Sidebar — lg'de dar, xl'de tam */}
           <aside className="hidden lg:flex flex-col gap-4 w-56 xl:w-72 shrink-0">
             <TrendingEmotions />
+            <TrendingHashtags />
             <SuggestedUsers />
           </aside>
         </div>

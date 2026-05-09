@@ -309,4 +309,15 @@ class SocialService: ObservableObject {
             completion(error)
         }
     }
+
+    // MARK: - Şikayet
+    func reportPost(postId: String, reportedBy: String, completion: @escaping (Error?) -> Void) {
+        db.collection("reports").addDocument(data: [
+            "postId":      postId,
+            "reportedBy":  reportedBy,
+            "createdAt":   FieldValue.serverTimestamp()
+        ]) { error in
+            completion(error)
+        }
+    }
 }
