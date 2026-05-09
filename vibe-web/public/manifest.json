@@ -1,0 +1,15 @@
+{
+  "name": "Vibe — Duyguyla Çiz",
+  "short_name": "Vibe",
+  "description": "Kalp atışın ve duygularınla şekillenen çizim deneyimi.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#FAF8F4",
+  "theme_color": "#D9723F",
+  "orientation": "portrait-primary",
+  "icons": [
+    { "src": "/logo.png", "sizes": "192x192", "type": "image/png", "purpose": "any maskable" },
+    { "src": "/logo.png", "sizes": "512x512", "type": "image/png", "purpose": "any maskable" }
+  ],
+  "categories": ["social", "art", "lifestyle"]
+}

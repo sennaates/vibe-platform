@@ -5,6 +5,8 @@ import Link from "next/link"
 import Image from "next/image"
 import { Feed } from "@/components/feed/Feed"
 import { FollowingFeed } from "@/components/feed/FollowingFeed"
+import { TrendingEmotions } from "@/components/sidebar/TrendingEmotions"
+import { SuggestedUsers } from "@/components/sidebar/SuggestedUsers"
 import { useAuth } from "@/hooks/useAuth"
 import { Compass, Users } from "lucide-react"
 import { cn } from "@/lib/utils"
@@ -59,27 +61,30 @@ export default function HomePage() {
         </div>
       )}
 
-      {/* Feed area */}
+      {/* Content area — feed + sidebar */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8">
-        {/* Tab switcher */}
-        <div className="flex items-center gap-1 mb-6 bg-white border border-[#E8E4DC] rounded-[16px] p-1 w-fit shadow-sm">
-          <TabBtn
-            active={tab === "discover"}
-            onClick={() => setTab("discover")}
-          >
-            <Compass size={15} />
-            Keşfet
-          </TabBtn>
-          <TabBtn
-            active={tab === "following"}
-            onClick={() => setTab("following")}
-          >
-            <Users size={15} />
-            Takip
-          </TabBtn>
-        </div>
+        <div className="flex gap-7">
+          {/* Main column */}
+          <div className="flex-1 min-w-0">
+            {/* Tab switcher */}
+            <div className="flex items-center gap-1 mb-6 bg-white border border-[#E8E4DC] rounded-[16px] p-1 w-fit shadow-sm">
+              <TabBtn active={tab === "discover"} onClick={() => setTab("discover")}>
+                <Compass size={15} /> Keşfet
+              </TabBtn>
+              <TabBtn active={tab === "following"} onClick={() => setTab("following")}>
+                <Users size={15} /> Takip
+              </TabBtn>
+            </div>
 
-        {tab === "discover" ? <Feed /> : <FollowingFeed />}
+            {tab === "discover" ? <Feed /> : <FollowingFeed />}
+          </div>
+
+          {/* Sidebar — only on xl+ */}
+          <aside className="hidden xl:flex flex-col gap-4 w-72 shrink-0">
+            <TrendingEmotions />
+            <SuggestedUsers />
+          </aside>
+        </div>
       </div>
     </main>
   )

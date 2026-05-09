@@ -9,10 +9,20 @@ const geist = Geist({ subsets: ["latin"], variable: "--font-geist" })
 export const metadata: Metadata = {
   title: "Vibe — Duyguyla Çiz",
   description: "Kalp atışınla şekillenen bir çizim deneyimi.",
+  manifest: "/manifest.json",
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: "default",
+    title: "Vibe",
+  },
   openGraph: {
     title: "Vibe",
     description: "Duyguyla çiz, paylaş.",
     type: "website",
+  },
+  other: {
+    "mobile-web-app-capable": "yes",
+    "theme-color": "#D9723F",
   },
 }
 
