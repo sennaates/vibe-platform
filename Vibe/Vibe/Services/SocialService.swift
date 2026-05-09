@@ -12,7 +12,8 @@ class SocialService: ObservableObject {
         let likeRef = db.collection("likes").document(likeId)
         let postRef = db.collection("posts").document(post.id)
 
-        likeRef.getDocument { snapshot, _ in
+        likeRef.getDocument { [weak self] snapshot, _ in
+            guard let self else { return }
             if snapshot?.exists == true {
                 // Beğeniyi kaldır
                 likeRef.delete()
@@ -23,6 +24,24 @@ class SocialService: ObservableObject {
                 likeRef.setData(["userId": userId, "postId": post.id, "createdAt": Date()])
                 postRef.updateData(["likeCount": FieldValue.increment(Int64(1))])
                 completion(true)
+
+                // Beğeni bildirimi — kendi gönderine beğeni varsa bildirim yok
+                if post.userId != userId {
+                    self.db.collection("users").document(userId).getDocument { snap, _ in
+                        guard let data = snap?.data(),
+                              let user = SocialUser.from(data, id: userId) else { return }
+                        self.createNotification(
+                            targetUserId:   post.userId,
+                            type:           "like",
+                            fromUserId:     userId,
+                            fromUserName:   user.displayName,
+                            fromUserAvatar: user.avatarEmoji,
+                            fromUserColor:  user.profileColorRaw,
+                            postId:         post.id,
+                            postImageUrl:   post.imageURL
+                        )
+                    }
+                }
             }
         }
     }
@@ -94,7 +113,24 @@ class SocialService: ObservableObject {
             forDocument: db.collection("users").document(targetUserId)
         )
 
-        batch.commit(completion: completion)
+        batch.commit { error in
+            completion(error)
+            if error == nil {
+                // Takip bildirimi gönder — takipçinin profilini okuyarak isim/emoji al
+                self.db.collection("users").document(currentUserId).getDocument { snap, _ in
+                    guard let data = snap?.data(),
+                          let user = SocialUser.from(data, id: currentUserId) else { return }
+                    self.createNotification(
+                        targetUserId:    targetUserId,
+                        type:            "follow",
+                        fromUserId:      currentUserId,
+                        fromUserName:    user.displayName,
+                        fromUserAvatar:  user.avatarEmoji,
+                        fromUserColor:   user.profileColorRaw
+                    )
+                }
+            }
+        }
     }
 
     func unfollow(targetUserId: String, currentUserId: String, completion: @escaping (Error?) -> Void) {
@@ -142,6 +178,89 @@ class SocialService: ObservableObject {
                 } ?? []
                 completion(posts)
             }
+    }
+
+    // MARK: - Kullanıcı Ara
+
+    func searchUsers(query: String, completion: @escaping ([SocialUser]) -> Void) {
+        guard !query.isEmpty else { completion([]); return }
+        let end = query + "\u{f8ff}"
+        db.collection("users")
+            .whereField("displayName", isGreaterThanOrEqualTo: query)
+            .whereField("displayName", isLessThanOrEqualTo: end)
+            .limit(to: 20)
+            .getDocuments { snapshot, _ in
+                let users = snapshot?.documents.compactMap {
+                    SocialUser.from($0.data(), id: $0.documentID)
+                } ?? []
+                completion(users)
+            }
+    }
+
+    // MARK: - Bildirimler
+
+    func listenNotifications(userId: String, onUpdate: @escaping ([AppNotification]) -> Void) -> ListenerRegistration {
+        return db.collection("notifications").document(userId).collection("items")
+            .order(by: "createdAt", descending: true)
+            .limit(to: 50)
+            .addSnapshotListener { snapshot, _ in
+                let notifs = snapshot?.documents.compactMap { doc -> AppNotification? in
+                    var data = doc.data()
+                    // Firestore Timestamp → Date
+                    if let ts = data["createdAt"] as? Timestamp {
+                        data["createdAt"] = ts.dateValue()
+                    }
+                    return AppNotification.from(data, id: doc.documentID)
+                } ?? []
+                onUpdate(notifs)
+            }
+    }
+
+    func markAllNotificationsRead(userId: String) {
+        db.collection("notifications").document(userId).collection("items")
+            .whereField("read", isEqualTo: false)
+            .getDocuments { snapshot, _ in
+                let batch = self.db.batch()
+                snapshot?.documents.forEach { doc in
+                    batch.updateData(["read": true], forDocument: doc.reference)
+                }
+                batch.commit(completion: nil)
+            }
+    }
+
+    func unreadNotificationCount(userId: String, completion: @escaping (Int) -> Void) -> ListenerRegistration {
+        return db.collection("notifications").document(userId).collection("items")
+            .whereField("read", isEqualTo: false)
+            .addSnapshotListener { snapshot, _ in
+                completion(snapshot?.documents.count ?? 0)
+            }
+    }
+
+    func createNotification(
+        targetUserId: String,
+        type: String,
+        fromUserId: String,
+        fromUserName: String,
+        fromUserAvatar: String,
+        fromUserColor: String,
+        postId: String? = nil,
+        postImageUrl: String? = nil
+    ) {
+        guard targetUserId != fromUserId else { return }
+        var data: [String: Any] = [
+            "type": type,
+            "fromUserId": fromUserId,
+            "fromUserName": fromUserName,
+            "fromUserAvatar": fromUserAvatar,
+            "fromUserColor": fromUserColor,
+            "read": false,
+            "createdAt": FieldValue.serverTimestamp()
+        ]
+        if let postId       { data["postId"]       = postId }
+        if let postImageUrl { data["postImageUrl"] = postImageUrl }
+
+        db.collection("notifications").document(targetUserId).collection("items")
+            .addDocument(data: data, completion: nil)
     }
 
     // MARK: - Gönderi Sil

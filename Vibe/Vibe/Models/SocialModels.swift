@@ -112,6 +112,46 @@ struct Post: Identifiable, Hashable {
     }
 }
 
+// MARK: - Bildirim
+
+struct AppNotification: Identifiable {
+    let id: String
+    let type: String          // "follow" | "like" | "comment"
+    let fromUserId: String
+    let fromUserName: String
+    let fromUserAvatar: String
+    let fromUserColor: String
+    let postId: String?
+    let postImageUrl: String?
+    var read: Bool
+    let createdAt: Date
+
+    static func from(_ dict: [String: Any], id: String) -> AppNotification? {
+        guard
+            let type         = dict["type"]         as? String,
+            let fromUserId   = dict["fromUserId"]   as? String,
+            let fromUserName = dict["fromUserName"] as? String,
+            let fromUserAvatar = dict["fromUserAvatar"] as? String,
+            let fromUserColor  = dict["fromUserColor"]  as? String
+        else { return nil }
+
+        let ts = dict["createdAt"] as? Date ?? Date()
+
+        return AppNotification(
+            id: id,
+            type: type,
+            fromUserId: fromUserId,
+            fromUserName: fromUserName,
+            fromUserAvatar: fromUserAvatar,
+            fromUserColor: fromUserColor,
+            postId: dict["postId"] as? String,
+            postImageUrl: dict["postImageUrl"] as? String,
+            read: dict["read"] as? Bool ?? false,
+            createdAt: ts
+        )
+    }
+}
+
 struct Comment: Identifiable {
     let id: String
     let userId: String

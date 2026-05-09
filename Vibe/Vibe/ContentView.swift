@@ -6,6 +6,7 @@
 //
 
 import SwiftUI
+import FirebaseFirestore
 
 struct ContentView: View {
     @EnvironmentObject var authService: AuthService
@@ -25,6 +26,11 @@ struct ContentView: View {
 struct MainTabView: View {
     @EnvironmentObject var authService: AuthService
     @State private var isShowingEditProfile = false
+    @State private var isShowingSettings    = false
+    @State private var unreadCount: Int     = 0
+    @State private var notifListener: (any ListenerRegistration)?
+
+    private let social = SocialService.shared
 
     var body: some View {
         TabView {
@@ -40,6 +46,21 @@ struct MainTabView: View {
                     Label("Akış", systemImage: "rectangle.stack")
                 }
 
+            // Ara
+            SearchView()
+                .environmentObject(authService)
+                .tabItem {
+                    Label("Ara", systemImage: "magnifyingglass")
+                }
+
+            // Bildirimler
+            NotificationsView()
+                .environmentObject(authService)
+                .tabItem {
+                    Label("Bildirimler", systemImage: "bell")
+                }
+                .badge(unreadCount > 0 ? unreadCount : 0)
+
             // Kendi Profili
             NavigationStack {
                 PublicProfileView(userId: authService.firebaseUser?.uid ?? "")
@@ -51,6 +72,12 @@ struct MainTabView: View {
                                     isShowingEditProfile = true
                                 } label: {
                                     Label("Profili Düzenle", systemImage: "pencil")
+                                }
+
+                                Button {
+                                    isShowingSettings = true
+                                } label: {
+                                    Label("Ayarlar", systemImage: "gearshape")
                                 }
 
                                 Button(role: .destructive) {
@@ -71,6 +98,19 @@ struct MainTabView: View {
         .sheet(isPresented: $isShowingEditProfile) {
             EditProfileView()
                 .environmentObject(authService)
+        }
+        .sheet(isPresented: $isShowingSettings) {
+            SettingsView()
+                .environmentObject(authService)
+        }
+        .onAppear { startUnreadListener() }
+        .onDisappear { notifListener?.remove() }
+    }
+
+    private func startUnreadListener() {
+        guard let uid = authService.firebaseUser?.uid else { return }
+        notifListener = social.unreadNotificationCount(userId: uid) { count in
+            unreadCount = count
         }
     }
 }
