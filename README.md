@@ -42,24 +42,18 @@ iOS native uygulaması + Next.js web uygulamasından oluşan full-stack proje.
 vibe/
 ├── Vibe/                        # iOS (Swift / SwiftUI)
 │   └── Vibe/
-│       ├── Models/              # SocialModels.swift (Post, Comment, AppNotification…)
-│       ├── Services/
-│       │   ├── AuthService.swift
-│       │   ├── FeedService.swift      # Sayfalama + Cloudinary yükleme
-│       │   └── SocialService.swift    # Like, follow, comment, hashtag, report
+│       ├── Models/              # DrawingRecord, EmotionState, SocialModels, UserProfile
+│       ├── Services/            # AuthService, BiometricService, FeedService, SocialService
+│       ├── Core/                # DrawingEngine, EmotionClassifier, HapticManager, DesignSystem, FirebaseConfig
+│       ├── Stores/              # DrawingStore, GalleryStore, UserStore (ObservableObject)
 │       └── Views/
-│           ├── Social/
-│           │   ├── FeedView.swift          # Keşfet / Takip sekmeleri + sayfalama
-│           │   ├── PostCard.swift          # Tıklanabilir hashtag, şikayet menüsü
-│           │   ├── PostDetailView.swift    # Yorum yanıtlama + caption düzenleme
-│           │   ├── SearchView.swift        # Kullanıcı ara + trend hashtagler
-│           │   ├── NotificationsView.swift
-│           │   ├── PublicProfileView.swift
-│           │   ├── HashtagFeedView.swift
-│           │   ├── CaptionText.swift       # #hashtag render bileşeni
-│           │   └── SettingsView.swift
-│           ├── CanvasView.swift
-│           └── …
+│           ├── Auth/            # AuthView, OnboardingView, UserFormView
+│           ├── Canvas/          # CanvasView, DrawingDetailView, GalleryView, MoodInputView…
+│           ├── Feed/            # FeedView, PostCard, PostDetailView, HashtagFeedView, SharePostView
+│           ├── Profile/         # EditProfileView, PublicProfileView, SettingsView
+│           ├── Discover/        # SearchView
+│           ├── Activity/        # NotificationsView, StatsView
+│           └── Shared/          # CaptionText, UserListView
 │
 ├── vibe-web/                    # Web (Next.js 15 App Router + Tailwind v4)
 │   ├── src/
@@ -76,13 +70,13 @@ vibe/
 │   │   ├── components/
 │   │   │   ├── feed/        # Feed, FollowingFeed, PostCard
 │   │   │   ├── canvas/      # DrawingCanvas, EmotionPicker
-│   │   │   ├── sidebar/     # TrendingEmotions, TrendingHashtags, SuggestedUsers
-│   │   │   └── ui/          # Avatar, Caption, Toast, ThemeProvider…
-│   │   └── lib/
-│   │       ├── firebase.ts
-│   │       ├── firestore-rest.ts   # Server-side SSR için REST client
-│   │       ├── notifications.ts
-│   │       └── toast.ts
+│   │   │   ├── discover/    # TrendingEmotions, TrendingHashtags, SuggestedUsers
+│   │   │   ├── profile/     # FollowListModal
+│   │   │   ├── layout/      # Navbar
+│   │   │   └── ui/          # Avatar, Button, Caption, Card, Toast, ThemeProvider…
+│   │   ├── hooks/           # useAuth
+│   │   ├── lib/             # firebase, firestore-rest, drawingEngine, notifications, toast, utils
+│   │   └── types/           # index.ts
 │   └── public/
 │       ├── sw.js            # Service Worker (network-first)
 │       └── offline.html
