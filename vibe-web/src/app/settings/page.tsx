@@ -12,10 +12,11 @@ import {
   reauthenticateWithCredential, EmailAuthProvider, deleteUser
 } from "firebase/auth"
 import {
-  User, Bell, Shield, LogOut, Trash2, ChevronRight,
+  User, Bell, BellRing, Shield, LogOut, Trash2, ChevronRight,
   Lock, Mail, Eye, EyeOff, Check, X, AlertTriangle,
   Info, Pencil
 } from "lucide-react"
+import { requestPushPermission } from "@/lib/firebase-messaging"
 import { auth, db } from "@/lib/firebase"
 import { useAuth } from "@/hooks/useAuth"
 import { toast } from "@/lib/toast"
@@ -124,6 +125,8 @@ export default function SettingsPage() {
   const [notifComments,  setNotifComments]  = useState(true)
   const [isPrivate,      setIsPrivate]      = useState(false)
   const [savingPrefs,    setSavingPrefs]    = useState(false)
+  const [pushEnabled,    setPushEnabled]    = useState(false)
+  const [pushLoading,    setPushLoading]    = useState(false)
 
   // Modal state
   const [modal, setModal] = useState<"password" | "email" | "delete" | null>(null)
@@ -287,6 +290,32 @@ export default function SettingsPage() {
 
       {/* Bildirimler */}
       <Section title="Bildirimler">
+        <SettingRow
+          icon={<BellRing size={18} />}
+          label="Push Bildirimleri"
+          sublabel={
+            pushEnabled
+              ? "Uygulama kapalıyken de bildirim alırsın"
+              : "Tarayıcı bildirimleri kapalı"
+          }
+        >
+          {pushLoading ? (
+            <span className="text-xs text-ink-subtle">Yükleniyor…</span>
+          ) : (
+            <Toggle
+              value={pushEnabled}
+              onChange={async (v) => {
+                if (!v || !user) return
+                setPushLoading(true)
+                const ok = await requestPushPermission(user.uid)
+                setPushEnabled(ok)
+                setPushLoading(false)
+                if (!ok) toast.error("Push bildirimleri açılamadı. Tarayıcı izinlerini kontrol et.")
+                else toast.success("Push bildirimleri açıldı 🔔")
+              }}
+            />
+          )}
+        </SettingRow>
         <SettingRow icon={<Bell size={18} />} label="Takip Bildirimleri" sublabel="Biri seni takip ettiğinde">
           <Toggle
             value={notifFollows}

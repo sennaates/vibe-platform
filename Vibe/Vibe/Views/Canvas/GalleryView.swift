@@ -4,6 +4,7 @@ import PencilKit
 struct GalleryView: View {
     @Environment(\.dismiss) private var dismiss
     @Environment(\.horizontalSizeClass) private var sizeClass
+    @EnvironmentObject var authService: AuthService
     @ObservedObject var galleryStore: GalleryStore
 
     @State private var isShowingStats = false
@@ -43,6 +44,7 @@ struct GalleryView: View {
             }
             .sheet(isPresented: $isShowingStats) {
                 StatsView(galleryStore: galleryStore)
+                    .environmentObject(authService)
             }
             .sheet(item: $selectedRecord) { record in
                 DrawingDetailView(record: record)

@@ -48,6 +48,12 @@ enum AppColor {
         Color(light: Color(red: 0.45, green: 0.42, blue: 0.38),
               dark:  Color(red: 0.65, green: 0.62, blue: 0.58))
     }
+
+    /// Üçüncül / soluk metin
+    static var inkSubtle: Color {
+        Color(light: Color(red: 0.65, green: 0.62, blue: 0.57),
+              dark:  Color(red: 0.45, green: 0.43, blue: 0.40))
+    }
 }
 
 // MARK: - Köşe yarıçapları
@@ -70,7 +76,7 @@ enum AppSpacing {
     static let xxl: CGFloat = 40
 }
 
-// MARK: - Color uzantısı: light/dark renk
+// MARK: - Color uzantısı: light/dark renk + hex
 
 extension Color {
     init(light: Color, dark: Color) {
@@ -79,6 +85,18 @@ extension Color {
                 ? UIColor(dark)
                 : UIColor(light)
         })
+    }
+
+    /// `"#D9723F"` veya `"D9723F"` formatında hex string'den Color oluşturur
+    init(hex: String) {
+        let hex = hex.trimmingCharacters(in: .init(charactersIn: "#"))
+        let scanner = Scanner(string: hex)
+        var rgb: UInt64 = 0
+        scanner.scanHexInt64(&rgb)
+        let r = Double((rgb >> 16) & 0xFF) / 255
+        let g = Double((rgb >> 8)  & 0xFF) / 255
+        let b = Double(rgb         & 0xFF) / 255
+        self.init(red: r, green: g, blue: b)
     }
 }
 

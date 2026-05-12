@@ -8,6 +8,7 @@ struct SharePostView: View {
 
     let drawing: PKDrawing
     let emotion: EmotionState
+    let bpm: Int
 
     @State private var caption = ""
     @State private var isPosting = false
@@ -175,7 +176,7 @@ struct SharePostView: View {
         guard let user = authService.socialUser, let image = thumbnail else { return }
         isPosting = true
         HapticManager.impact(.medium)
-        feedService.sharePost(image: image, emotion: emotion, caption: caption, user: user) { error in
+        feedService.sharePost(image: image, emotion: emotion, bpm: bpm, caption: caption, user: user) { error in
             isPosting = false
             if let error {
                 errorMessage = error.localizedDescription

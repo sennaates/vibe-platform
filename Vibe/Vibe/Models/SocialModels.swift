@@ -60,6 +60,7 @@ struct Post: Identifiable, Hashable {
     let userProfileColorRaw: String
     let imageURL: String
     let emotion: EmotionState
+    let bpm: Int
     let caption: String
     var likeCount: Int
     var commentCount: Int
@@ -89,6 +90,7 @@ struct Post: Identifiable, Hashable {
             "userProfileColorRaw": userProfileColorRaw,
             "imageURL": imageURL,
             "emotion": emotion.rawValue,
+            "bpm": bpm,
             "caption": caption,
             "likeCount": likeCount,
             "commentCount": commentCount,
@@ -118,6 +120,7 @@ struct Post: Identifiable, Hashable {
             userProfileColorRaw: userProfileColorRaw,
             imageURL: imageURL,
             emotion: emotion,
+            bpm: dict["bpm"] as? Int ?? 72,
             caption: dict["caption"] as? String ?? "",
             likeCount: dict["likeCount"] as? Int ?? 0,
             commentCount: dict["commentCount"] as? Int ?? 0,

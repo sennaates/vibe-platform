@@ -101,6 +101,7 @@ class FeedService: ObservableObject {
     func sharePost(
         image: UIImage,
         emotion: EmotionState,
+        bpm: Int = 72,
         caption: String,
         user: SocialUser,
         completion: @escaping (Error?) -> Void
@@ -124,6 +125,7 @@ class FeedService: ObservableObject {
                     userProfileColorRaw: user.profileColorRaw,
                     imageURL: url,
                     emotion: emotion,
+                    bpm: bpm,
                     caption: caption,
                     likeCount: 0,
                     commentCount: 0,

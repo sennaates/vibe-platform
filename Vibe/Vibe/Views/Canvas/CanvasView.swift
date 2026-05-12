@@ -107,10 +107,15 @@ struct CanvasView: View {
         }
         .sheet(isPresented: $isShowingGallery) {
             GalleryView(galleryStore: galleryStore)
+                .environmentObject(AuthService.shared)
         }
         .sheet(isPresented: $isShowingShare) {
-            SharePostView(drawing: canvasView.drawing, emotion: biometricService.currentEmotion)
-                .environmentObject(AuthService.shared)
+            SharePostView(
+                drawing: canvasView.drawing,
+                emotion: biometricService.currentEmotion,
+                bpm: biometricService.currentBPM
+            )
+            .environmentObject(AuthService.shared)
         }
         .onReceive(NotificationCenter.default.publisher(for: .NSUndoManagerCheckpoint)) { _ in updateUndoState() }
         .onReceive(NotificationCenter.default.publisher(for: .NSUndoManagerDidUndoChange)) { _ in updateUndoState() }
