@@ -52,7 +52,8 @@ export function PostCard({ post, isLiked: initialLiked = false, onDeleted }: Pos
 
   async function handleDelete() {
     await deleteDoc(doc(db, "posts", post.id))
-    await updateDoc(doc(db, "users", post.userId), { postsCount: increment(-1) })
+    // Dual-write: web canonical + iOS legacy field
+    await updateDoc(doc(db, "users", post.userId), { postsCount: increment(-1), postCount: increment(-1) })
     setDeleted(true)
     onDeleted?.(post.id)
   }
@@ -68,13 +69,15 @@ export function PostCard({ post, isLiked: initialLiked = false, onDeleted }: Pos
     if (liked) {
       await deleteDoc(likeRef)
       await deleteDoc(userLikeRef)
-      await updateDoc(postRef, { likesCount: increment(-1) })
+      // Dual-write: web canonical + iOS legacy field
+      await updateDoc(postRef, { likesCount: increment(-1), likeCount: increment(-1) })
       setLiked(false)
       setLikes(l => l - 1)
     } else {
       await setDoc(likeRef, { userId: user.uid, createdAt: new Date() })
       await setDoc(userLikeRef, { postId: post.id, likedAt: new Date() })
-      await updateDoc(postRef, { likesCount: increment(1) })
+      // Dual-write: web canonical + iOS legacy field
+      await updateDoc(postRef, { likesCount: increment(1), likeCount: increment(1) })
       setLiked(true)
       setLikes(l => l + 1)
       if (profile) {

@@ -73,13 +73,13 @@ export default function PostDetailPage({ params }: { params: Promise<{ id: strin
     if (liked) {
       await deleteDoc(likeRef)
       await deleteDoc(userLikeRef)
-      await updateDoc(postRef, { likesCount: increment(-1) })
+      await updateDoc(postRef, { likesCount: increment(-1), likeCount: increment(-1) })
       setLiked(false)
       setLikes(l => l - 1)
     } else {
       await setDoc(likeRef, { userId: user.uid, createdAt: new Date() })
       await setDoc(userLikeRef, { postId: id, likedAt: new Date() })
-      await updateDoc(postRef, { likesCount: increment(1) })
+      await updateDoc(postRef, { likesCount: increment(1), likeCount: increment(1) })
       setLiked(true)
       setLikes(l => l + 1)
       if (profile) {
@@ -122,7 +122,7 @@ export default function PostDetailPage({ params }: { params: Promise<{ id: strin
     if (!post || !user || !isOwnPost) return
     setDeleting(true)
     await deleteDoc(doc(db, "posts", id))
-    await updateDoc(doc(db, "users", post.userId), { postsCount: increment(-1) })
+    await updateDoc(doc(db, "users", post.userId), { postsCount: increment(-1), postCount: increment(-1) })
     router.push(`/profile/${user.uid}`)
   }
 
@@ -138,7 +138,7 @@ export default function PostDetailPage({ params }: { params: Promise<{ id: strin
       replyToName: replyTo?.name ?? null,
       createdAt: serverTimestamp(),
     })
-    await updateDoc(doc(db, "posts", id), { commentsCount: increment(1) })
+    await updateDoc(doc(db, "posts", id), { commentsCount: increment(1), commentCount: increment(1) })
     if (post) {
       await createNotification({
         targetUserId:   post.userId,
@@ -349,7 +349,7 @@ export default function PostDetailPage({ params }: { params: Promise<{ id: strin
                             <button
                               onClick={async () => {
                                 await deleteDoc(doc(db, "posts", id, "comments", c.id))
-                                await updateDoc(doc(db, "posts", id), { commentsCount: increment(-1) })
+                                await updateDoc(doc(db, "posts", id), { commentsCount: increment(-1), commentCount: increment(-1) })
                               }}
                               className="p-1 rounded text-ink-subtle hover:text-red-400 transition-colors"
                             >
