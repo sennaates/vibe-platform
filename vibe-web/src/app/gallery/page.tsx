@@ -1,10 +1,13 @@
 "use client"
 
-import { useEffect, useMemo, useState } from "react"
+import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import Image from "next/image"
 import Link from "next/link"
-import { Plus } from "lucide-react"
-import { collection, query, where, orderBy, getDocs } from "firebase/firestore"
+import { Loader2, Plus } from "lucide-react"
+import {
+  collection, query, where, orderBy, getDocs,
+  limit, startAfter, QueryDocumentSnapshot
+} from "firebase/firestore"
 import { db } from "@/lib/firebase"
 import { useAuth } from "@/hooks/useAuth"
 import { profileColors } from "@/lib/design"
@@ -12,26 +15,66 @@ import { formatRelativeTime } from "@/lib/utils"
 import { cn } from "@/lib/utils"
 import { normalizePost, type NormalizedPost } from "@/types"
 
+const PAGE_SIZE = 48
+
 export default function GalleryPage() {
   const { user, loading } = useAuth()
-  const [posts, setPosts]         = useState<NormalizedPost[]>([])
-  const [fetching, setFetching]   = useState(true)
-  const [activeEmotion, setActive] = useState<string>("all")
+  const [posts, setPosts]           = useState<NormalizedPost[]>([])
+  const [fetching, setFetching]     = useState(true)
+  const [loadingMore, setLoadingMore] = useState(false)
+  const [hasMore, setHasMore]       = useState(true)
+  const [activeEmotion, setActive]  = useState<string>("all")
+  const lastDocRef                  = useRef<QueryDocumentSnapshot | null>(null)
+  const sentinelRef                 = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
     if (!user) { setFetching(false); return }
     const q = query(
       collection(db, "posts"),
       where("userId", "==", user.uid),
-      orderBy("createdAt", "desc")
+      orderBy("createdAt", "desc"),
+      limit(PAGE_SIZE)
     )
     getDocs(q).then(snap => {
-      setPosts(snap.docs.map(d => (normalizePost({ id: d.id, ...d.data() } as Parameters<typeof normalizePost>[0]))))
+      const fetched = snap.docs.map(d => normalizePost({ id: d.id, ...d.data() } as Parameters<typeof normalizePost>[0]))
+      lastDocRef.current = snap.docs[snap.docs.length - 1] ?? null
+      setHasMore(snap.docs.length === PAGE_SIZE)
+      setPosts(fetched)
       setFetching(false)
     })
   }, [user])
 
-  // Unique emotions from user's posts
+  const loadMore = useCallback(async () => {
+    if (loadingMore || !hasMore || !lastDocRef.current || !user) return
+    setLoadingMore(true)
+    const q = query(
+      collection(db, "posts"),
+      where("userId", "==", user.uid),
+      orderBy("createdAt", "desc"),
+      startAfter(lastDocRef.current),
+      limit(PAGE_SIZE)
+    )
+    const snap = await getDocs(q)
+    const fetched = snap.docs.map(d => normalizePost({ id: d.id, ...d.data() } as Parameters<typeof normalizePost>[0]))
+    lastDocRef.current = snap.docs[snap.docs.length - 1] ?? null
+    setHasMore(snap.docs.length === PAGE_SIZE)
+    setPosts(prev => [...prev, ...fetched])
+    setLoadingMore(false)
+  }, [loadingMore, hasMore, user])
+
+  // Infinite scroll
+  useEffect(() => {
+    const el = sentinelRef.current
+    if (!el) return
+    const obs = new IntersectionObserver(
+      entries => { if (entries[0].isIntersecting) loadMore() },
+      { rootMargin: "200px" }
+    )
+    obs.observe(el)
+    return () => obs.disconnect()
+  }, [loadMore])
+
+  // Unique emotions from loaded posts
   const emotions = useMemo(() => {
     const map = new Map<string, { label: string; emoji: string }>()
     posts.forEach(p => {
@@ -137,7 +180,7 @@ export default function GalleryPage() {
       ) : (
         <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-2 sm:gap-3">
           {filtered.map(post => {
-            const accent = profileColors[post.userColor] ?? "#4A7FA5"
+            const accent = profileColors[post.userColor as keyof typeof profileColors] ?? "#4A7FA5"
             return (
               <Link
                 key={post.id}
@@ -169,6 +212,14 @@ export default function GalleryPage() {
           })}
         </div>
       )}
+
+      {/* Infinite scroll sentinel */}
+      <div ref={sentinelRef} className="mt-6 flex justify-center py-4">
+        {loadingMore && <Loader2 size={20} className="animate-spin text-ink-subtle" />}
+        {!hasMore && posts.length > 0 && (
+          <p className="text-xs text-ink-subtle">Tüm çizimler yüklendi</p>
+        )}
+      </div>
     </div>
   )
 }

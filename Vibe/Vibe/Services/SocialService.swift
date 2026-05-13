@@ -86,9 +86,12 @@ class SocialService: ObservableObject {
                 // Yorum bildirimi — post sahibine gönder
                 self.db.collection("posts").document(postId).getDocument { snap, _ in
                     guard let data = snap?.data(),
-                          let postOwnerId = data["userId"] as? String,
-                          let postImageUrl = data["imageURL"] as? String
+                          let postOwnerId = data["userId"] as? String
                     else { return }
+                    // iOS "imageURL" veya web "imageUrl" — her ikisini de dene
+                    let postImageUrl = data["imageURL"] as? String
+                                   ?? data["imageUrl"] as? String
+                                   ?? ""
 
                     self.createNotification(
                         targetUserId:   postOwnerId,

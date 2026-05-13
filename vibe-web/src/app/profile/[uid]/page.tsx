@@ -41,7 +41,14 @@ export default function ProfilePage({ params }: { params: Promise<{ uid: string 
     async function load() {
       const snap = await getDoc(doc(db, "users", uid))
       if (!snap.exists()) { setLoading(false); return }
-      const data = snap.data() as SocialUser
+      const raw = snap.data()!
+      // iOS compat: normalize counter field names
+      const data: SocialUser = {
+        ...raw,
+        postsCount:     raw.postsCount     ?? raw.postCount     ?? 0,
+        followersCount: raw.followersCount  ?? raw.followerCount ?? 0,
+        followingCount: raw.followingCount  ?? 0,
+      } as SocialUser
       setPageProfile(data)
       setLocalFollowers(data.followersCount)
       const q = query(collection(db, "posts"), where("userId", "==", uid), orderBy("createdAt", "desc"))

@@ -44,7 +44,16 @@ export default function SearchPage() {
       )
       const snap = await getDocs(q)
       const users = snap.docs
-        .map(d => d.data() as SocialUser)
+        .map(d => {
+          const data = d.data()
+          // iOS compat: normalize counter field names
+          return {
+            ...data,
+            postsCount:     data.postsCount     ?? data.postCount     ?? 0,
+            followersCount: data.followersCount  ?? data.followerCount ?? 0,
+            followingCount: data.followingCount  ?? 0,
+          } as SocialUser
+        })
         .filter(u => u.uid !== user?.uid) // exclude self
 
       // check follow status for each
