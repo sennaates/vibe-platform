@@ -1,5 +1,6 @@
 import Foundation
 import SwiftUI
+import FirebaseFirestore
 
 // MARK: - SocialUser
 
@@ -49,7 +50,9 @@ struct SocialUser: Identifiable {
         let postCount       = dict["postsCount"]      as? Int
                            ?? dict["postCount"]       as? Int
                            ?? 0
-        let createdAt: Date = (dict["createdAt"] as? Date) ?? Date()
+        let createdAt: Date = (dict["createdAt"] as? Timestamp)?.dateValue()
+                          ?? dict["createdAt"] as? Date
+                          ?? Date()
 
         return SocialUser(
             id:             id,
@@ -172,7 +175,9 @@ struct Post: Identifiable, Hashable {
             caption:             dict["caption"] as? String ?? "",
             likeCount:           likeCount,
             commentCount:        commentCount,
-            createdAt:           (dict["createdAt"] as? Date) ?? Date()
+            createdAt:           (dict["createdAt"] as? Timestamp)?.dateValue()
+                              ?? dict["createdAt"] as? Date
+                              ?? Date()
         )
     }
 }
@@ -200,7 +205,9 @@ struct AppNotification: Identifiable {
             let fromUserColor  = dict["fromUserColor"]  as? String
         else { return nil }
 
-        let ts = dict["createdAt"] as? Date ?? Date()
+        let ts = (dict["createdAt"] as? Timestamp)?.dateValue()
+              ?? dict["createdAt"] as? Date
+              ?? Date()
 
         return AppNotification(
             id: id,
@@ -261,7 +268,9 @@ struct Comment: Identifiable {
             userDisplayName: userDisplayName,
             userAvatarEmoji: userAvatarEmoji,
             text:            text,
-            createdAt:       (dict["createdAt"] as? Date) ?? Date(),
+            createdAt:       (dict["createdAt"] as? Timestamp)?.dateValue()
+                          ?? dict["createdAt"] as? Date
+                          ?? Date(),
             replyToId:       dict["replyToId"]   as? String,
             replyToName:     dict["replyToName"] as? String
         )
