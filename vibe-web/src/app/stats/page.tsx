@@ -11,7 +11,7 @@ import {
 import { db } from "@/lib/firebase"
 import { useAuth } from "@/hooks/useAuth"
 import { Timestamp } from "firebase/firestore"
-import type { Post } from "@/types"
+import { normalizePost, type NormalizedPost } from "@/types"
 
 interface EmotionStat { label: string; emoji: string; count: number; color: string }
 
@@ -22,7 +22,7 @@ const EMOTION_COLORS: Record<string, string> = {
   "Odaklanmış": "#3A8FA0",
 }
 
-function calcStreak(posts: Post[]): number {
+function calcStreak(posts: NormalizedPost[]): number {
   if (posts.length === 0) return 0
   const daySet = new Set(
     posts.map(p => {
@@ -44,14 +44,14 @@ function calcStreak(posts: Post[]): number {
 
 export default function StatsPage() {
   const { user, loading } = useAuth()
-  const [posts, setPosts]       = useState<Post[]>([])
+  const [posts, setPosts]       = useState<NormalizedPost[]>([])
   const [fetching, setFetching] = useState(true)
 
   useEffect(() => {
     if (!user) { setFetching(false); return }
     const q = query(collection(db, "posts"), where("userId", "==", user.uid), orderBy("createdAt", "desc"))
     getDocs(q).then(snap => {
-      setPosts(snap.docs.map(d => ({ id: d.id, ...d.data() } as Post)))
+      setPosts(snap.docs.map(d => (normalizePost({ id: d.id, ...d.data() } as Parameters<typeof normalizePost>[0]))))
       setFetching(false)
     })
   }, [user])

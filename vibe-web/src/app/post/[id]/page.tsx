@@ -18,14 +18,14 @@ import { formatRelativeTime } from "@/lib/utils"
 import { createNotification } from "@/lib/notifications"
 import { toast } from "@/lib/toast"
 import { Caption } from "@/components/ui/Caption"
-import type { Post, Comment } from "@/types"
+import { normalizePost, type NormalizedPost, type Comment } from "@/types"
 
 export default function PostDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params)
   const { user, profile } = useAuth()
   const router = useRouter()
 
-  const [post, setPost]           = useState<Post | null>(null)
+  const [post, setPost]           = useState<NormalizedPost | null>(null)
   const [comments, setComments]   = useState<Comment[]>([])
   const [text, setText]           = useState("")
   const [sending, setSending]     = useState(false)
@@ -43,7 +43,7 @@ export default function PostDetailPage({ params }: { params: Promise<{ id: strin
   useEffect(() => {
     getDoc(doc(db, "posts", id)).then(snap => {
       if (snap.exists()) {
-        const data = { id: snap.id, ...snap.data() } as Post
+        const data = normalizePost({ id: snap.id, ...snap.data() } as Parameters<typeof normalizePost>[0])
         setPost(data)
         setLikes(data.likesCount)
       }
@@ -327,17 +327,17 @@ export default function PostDetailPage({ params }: { params: Promise<{ id: strin
               ) : (
                 comments.map(c => (
                   <div key={c.id} className="flex gap-3 px-5 py-3.5 group">
-                    <Avatar emoji={c.userAvatar} color={c.userColor} size="sm" className="mt-0.5 shrink-0" />
+                    <Avatar emoji={c.userAvatar ?? c.userAvatarEmoji ?? "🎨"} color="blue" size="sm" className="mt-0.5 shrink-0" />
                     <div className="min-w-0 flex-1">
                       <div className="flex items-baseline gap-1.5 flex-wrap">
-                        <span className="text-xs font-semibold text-ink">{c.userName}</span>
+                        <span className="text-xs font-semibold text-ink">{c.userName ?? c.userDisplayName ?? "Kullanıcı"}</span>
                         <span className="text-[10px] text-ink-subtle">{formatRelativeTime(c.createdAt)}</span>
                         <div className="ml-auto flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
                           {/* Reply button */}
                           {user && (
                             <button
                               onClick={() => {
-                                setReplyTo({ id: c.id, name: c.userName })
+                                setReplyTo({ id: c.id, name: c.userName ?? c.userDisplayName ?? "Kullanıcı" })
                                 inputRef.current?.focus()
                               }}
                               className="text-[10px] font-medium text-ink-subtle hover:text-accent px-1.5 py-0.5 rounded transition-colors"

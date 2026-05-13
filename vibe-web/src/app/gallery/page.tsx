@@ -10,11 +10,11 @@ import { useAuth } from "@/hooks/useAuth"
 import { profileColors } from "@/lib/design"
 import { formatRelativeTime } from "@/lib/utils"
 import { cn } from "@/lib/utils"
-import type { Post } from "@/types"
+import { normalizePost, type NormalizedPost } from "@/types"
 
 export default function GalleryPage() {
   const { user, loading } = useAuth()
-  const [posts, setPosts]         = useState<Post[]>([])
+  const [posts, setPosts]         = useState<NormalizedPost[]>([])
   const [fetching, setFetching]   = useState(true)
   const [activeEmotion, setActive] = useState<string>("all")
 
@@ -26,7 +26,7 @@ export default function GalleryPage() {
       orderBy("createdAt", "desc")
     )
     getDocs(q).then(snap => {
-      setPosts(snap.docs.map(d => ({ id: d.id, ...d.data() } as Post)))
+      setPosts(snap.docs.map(d => (normalizePost({ id: d.id, ...d.data() } as Parameters<typeof normalizePost>[0]))))
       setFetching(false)
     })
   }, [user])

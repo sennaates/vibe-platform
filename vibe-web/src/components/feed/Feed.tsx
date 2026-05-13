@@ -10,7 +10,7 @@ import { db } from "@/lib/firebase"
 import { useAuth } from "@/hooks/useAuth"
 import { PostCard } from "./PostCard"
 import { cn } from "@/lib/utils"
-import type { Post } from "@/types"
+import { normalizePost, type NormalizedPost } from "@/types"
 
 export type FeedSort = "recent" | "popular"
 
@@ -36,7 +36,7 @@ function PostSkeleton() {
   )
 }
 
-async function enrichLikes(posts: Post[], userId: string): Promise<Set<string>> {
+async function enrichLikes(posts: NormalizedPost[], userId: string): Promise<Set<string>> {
   const likedSet = new Set<string>()
   await Promise.all(posts.map(async p => {
     const s = await getDoc(doc(db, "posts", p.id, "likes", userId))
@@ -48,7 +48,7 @@ async function enrichLikes(posts: Post[], userId: string): Promise<Set<string>> 
 export function Feed() {
   const { user } = useAuth()
   const [sort, setSort]             = useState<FeedSort>("recent")
-  const [posts, setPosts]           = useState<Post[]>([])
+  const [posts, setPosts]           = useState<NormalizedPost[]>([])
   const [liked, setLiked]           = useState<Set<string>>(new Set())
   const [loading, setLoading]       = useState(true)
   const [loadingMore, setLoadingMore] = useState(false)
@@ -71,7 +71,7 @@ export function Feed() {
       // Realtime ilk sayfa
       const q = query(collection(db, "posts"), orderBy("createdAt", "desc"), limit(PAGE_SIZE))
       const unsub = onSnapshot(q, async snap => {
-        const fetched = snap.docs.map(d => ({ id: d.id, ...d.data() } as Post))
+        const fetched = snap.docs.map(d => (normalizePost({ id: d.id, ...d.data() } as Parameters<typeof normalizePost>[0])))
         lastDocRef.current = snap.docs[snap.docs.length - 1] ?? null
         setHasMore(snap.docs.length === PAGE_SIZE)
         setPosts(fetched)
@@ -86,7 +86,7 @@ export function Feed() {
     } else {
       const q = query(collection(db, "posts"), orderBy("likesCount", "desc"), limit(PAGE_SIZE))
       getDocs(q).then(async snap => {
-        const fetched = snap.docs.map(d => ({ id: d.id, ...d.data() } as Post))
+        const fetched = snap.docs.map(d => (normalizePost({ id: d.id, ...d.data() } as Parameters<typeof normalizePost>[0])))
         lastDocRef.current = snap.docs[snap.docs.length - 1] ?? null
         setHasMore(snap.docs.length === PAGE_SIZE)
         setPosts(fetched)
@@ -112,7 +112,7 @@ export function Feed() {
       limit(PAGE_SIZE)
     )
     const snap = await getDocs(q)
-    const fetched = snap.docs.map(d => ({ id: d.id, ...d.data() } as Post))
+    const fetched = snap.docs.map(d => (normalizePost({ id: d.id, ...d.data() } as Parameters<typeof normalizePost>[0])))
     lastDocRef.current = snap.docs[snap.docs.length - 1] ?? null
     setHasMore(snap.docs.length === PAGE_SIZE)
     if (user) {

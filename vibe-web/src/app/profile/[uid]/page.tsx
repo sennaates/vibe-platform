@@ -15,7 +15,8 @@ import { useAuth } from "@/hooks/useAuth"
 import { profileColors } from "@/lib/design"
 import { createNotification } from "@/lib/notifications"
 import { FollowListModal } from "@/components/profile/FollowListModal"
-import type { SocialUser, Post } from "@/types"
+import { normalizePost, type NormalizedPost } from "@/types"
+import type { SocialUser } from "@/types"
 
 export default function ProfilePage({ params }: { params: Promise<{ uid: string }> }) {
   const { uid } = use(params)
@@ -23,14 +24,14 @@ export default function ProfilePage({ params }: { params: Promise<{ uid: string 
   const router = useRouter()
 
   const [pageProfile, setPageProfile]       = useState<SocialUser | null>(null)
-  const [posts, setPosts]                   = useState<Post[]>([])
+  const [posts, setPosts]                   = useState<NormalizedPost[]>([])
   const [loading, setLoading]               = useState(true)
   const [following, setFollowing]           = useState(false)
   const [followLoading, setFollowLoading]   = useState(false)
   const [localFollowers, setLocalFollowers] = useState(0)
   const [followModal, setFollowModal]       = useState<"followers" | "following" | null>(null)
   const [profileTab, setProfileTab]         = useState<"posts" | "liked">("posts")
-  const [likedPosts, setLikedPosts]         = useState<Post[]>([])
+  const [likedPosts, setLikedPosts]         = useState<NormalizedPost[]>([])
   const [likedLoading, setLikedLoading]     = useState(false)
 
   const isOwn  = user?.uid === uid
@@ -45,7 +46,7 @@ export default function ProfilePage({ params }: { params: Promise<{ uid: string 
       setLocalFollowers(data.followersCount)
       const q = query(collection(db, "posts"), where("userId", "==", uid), orderBy("createdAt", "desc"))
       const postSnap = await getDocs(q)
-      setPosts(postSnap.docs.map(d => ({ id: d.id, ...d.data() } as Post)))
+      setPosts(postSnap.docs.map(d => (normalizePost({ id: d.id, ...d.data() } as Parameters<typeof normalizePost>[0]))))
       setLoading(false)
     }
     load()
@@ -67,7 +68,7 @@ export default function ProfilePage({ params }: { params: Promise<{ uid: string 
       const postIds = snap.docs.map(d => d.data().postId as string)
       if (postIds.length === 0) { setLikedLoading(false); return }
       const postDocs = await Promise.all(postIds.map(pid => getDoc(doc(db, "posts", pid))))
-      setLikedPosts(postDocs.filter(d => d.exists()).map(d => ({ id: d.id, ...d.data() } as Post)))
+      setLikedPosts(postDocs.filter(d => d.exists()).map(d => (normalizePost({ id: d.id, ...d.data() } as Parameters<typeof normalizePost>[0]))))
       setLikedLoading(false)
     }
     loadLiked()
@@ -267,11 +268,11 @@ export default function ProfilePage({ params }: { params: Promise<{ uid: string 
   )
 }
 
-function PostGrid({ posts }: { posts: Post[] }) {
+function PostGrid({ posts }: { posts: NormalizedPost[] }) {
   return (
     <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-2.5 sm:gap-3">
       {posts.map(post => {
-        const postAccent = profileColors[post.userColor] ?? "#4A7FA5"
+        const postAccent = profileColors[post.userColor as keyof typeof profileColors] ?? "#4A7FA5"
         return (
           <Link
             key={post.id}

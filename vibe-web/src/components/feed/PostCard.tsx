@@ -13,10 +13,10 @@ import { profileColors } from "@/lib/design"
 import { formatRelativeTime } from "@/lib/utils"
 import { createNotification } from "@/lib/notifications"
 import { toast } from "@/lib/toast"
-import type { Post } from "@/types"
+import type { NormalizedPost } from "@/types"
 
 interface PostCardProps {
-  post: Post
+  post: NormalizedPost
   isLiked?: boolean
   onDeleted?: (id: string) => void
 }

@@ -10,7 +10,7 @@ import { db } from "@/lib/firebase"
 import { useAuth } from "@/hooks/useAuth"
 import { PostCard } from "./PostCard"
 import { Loader2 } from "lucide-react"
-import type { Post } from "@/types"
+import { normalizePost, type NormalizedPost } from "@/types"
 
 const PAGE_SIZE = 12
 
@@ -36,7 +36,7 @@ function PostSkeleton() {
 
 export function FollowingFeed() {
   const { user } = useAuth()
-  const [posts, setPosts]           = useState<Post[]>([])
+  const [posts, setPosts]           = useState<NormalizedPost[]>([])
   const [liked, setLiked]           = useState<Set<string>>(new Set())
   const [loading, setLoading]       = useState(true)
   const [hasMore, setHasMore]       = useState(true)
@@ -66,7 +66,7 @@ export function FollowingFeed() {
     if (lastDocRef.current) constraints.push(startAfter(lastDocRef.current))
 
     const snap = await getDocs(query(collection(db, "posts"), ...constraints))
-    const newPosts = snap.docs.map(d => ({ id: d.id, ...d.data() } as Post))
+    const newPosts = snap.docs.map(d => normalizePost({ id: d.id, ...d.data() } as Parameters<typeof normalizePost>[0]))
 
     // Check liked status for new posts
     const uid = user!.uid

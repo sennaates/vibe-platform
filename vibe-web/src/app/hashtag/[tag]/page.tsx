@@ -15,7 +15,7 @@ import {
 import { db } from "@/lib/firebase"
 import { PostCard } from "@/components/feed/PostCard"
 import { Hash, Loader2 } from "lucide-react"
-import type { Post } from "@/types"
+import { normalizePost, type NormalizedPost } from "@/types"
 
 const PAGE_SIZE = 12
 
@@ -23,7 +23,7 @@ export default function HashtagPage() {
   const params = useParams()
   const tag = (params.tag as string).toLowerCase()
 
-  const [posts, setPosts] = useState<Post[]>([])
+  const [posts, setPosts] = useState<NormalizedPost[]>([])
   const [loading, setLoading] = useState(true)
   const [hasMore, setHasMore] = useState(true)
   const lastDocRef = useRef<QueryDocumentSnapshot | null>(null)
@@ -44,7 +44,7 @@ export default function HashtagPage() {
     }
 
     const snap = await getDocs(query(collection(db, "posts"), ...constraints))
-    const newPosts = snap.docs.map(d => ({ id: d.id, ...d.data() } as Post))
+    const newPosts = snap.docs.map(d => (normalizePost({ id: d.id, ...d.data() } as Parameters<typeof normalizePost>[0])))
 
     if (reset) {
       setPosts(newPosts)

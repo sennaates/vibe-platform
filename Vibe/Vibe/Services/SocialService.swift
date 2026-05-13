@@ -8,8 +8,8 @@ class SocialService: ObservableObject {
     // MARK: - Beğeni
 
     func toggleLike(post: Post, userId: String, completion: @escaping (Bool) -> Void) {
-        let likeId = "\(userId)_\(post.id)"
-        let likeRef = db.collection("likes").document(likeId)
+        // Web ile aynı yapı: posts/{postId}/likes/{userId} subkoleksiyonu
+        let likeRef = db.collection("posts").document(post.id).collection("likes").document(userId)
         let postRef = db.collection("posts").document(post.id)
 
         likeRef.getDocument { [weak self] snapshot, _ in
@@ -17,15 +17,22 @@ class SocialService: ObservableObject {
             if snapshot?.exists == true {
                 // Beğeniyi kaldır
                 likeRef.delete()
-                postRef.updateData(["likeCount": FieldValue.increment(Int64(-1))])
+                // Her iki sayaç adını birlikte güncelle (geriye dönük uyum)
+                postRef.updateData([
+                    "likesCount": FieldValue.increment(Int64(-1)),
+                    "likeCount":  FieldValue.increment(Int64(-1))
+                ])
                 completion(false)
             } else {
                 // Beğen
                 likeRef.setData(["userId": userId, "postId": post.id, "createdAt": Date()])
-                postRef.updateData(["likeCount": FieldValue.increment(Int64(1))])
+                postRef.updateData([
+                    "likesCount": FieldValue.increment(Int64(1)),
+                    "likeCount":  FieldValue.increment(Int64(1))
+                ])
                 completion(true)
 
-                // Beğeni bildirimi — kendi gönderine beğeni varsa bildirim yok
+                // Beğeni bildirimi — kendi gönderisine beğeni gelirse bildirim yok
                 if post.userId != userId {
                     self.db.collection("users").document(userId).getDocument { snap, _ in
                         guard let data = snap?.data(),
@@ -71,7 +78,10 @@ class SocialService: ObservableObject {
             guard let self else { return }
             if error == nil {
                 self.db.collection("posts").document(postId)
-                    .updateData(["commentCount": FieldValue.increment(Int64(1))])
+                    .updateData([
+                        "commentsCount": FieldValue.increment(Int64(1)),
+                        "commentCount":  FieldValue.increment(Int64(1))
+                    ])
 
                 // Yorum bildirimi — post sahibine gönder
                 self.db.collection("posts").document(postId).getDocument { snap, _ in
@@ -125,7 +135,10 @@ class SocialService: ObservableObject {
         commentRef.delete { [weak self] error in
             if error == nil {
                 self?.db.collection("posts").document(postId)
-                    .updateData(["commentCount": FieldValue.increment(Int64(-1))])
+                    .updateData([
+                        "commentsCount": FieldValue.increment(Int64(-1)),
+                        "commentCount":  FieldValue.increment(Int64(-1))
+                    ])
             }
             completion(error)
         }
@@ -149,7 +162,8 @@ class SocialService: ObservableObject {
             forDocument: db.collection("users").document(currentUserId)
         )
         batch.updateData(
-            ["followerCount": FieldValue.increment(Int64(1))],
+            ["followersCount": FieldValue.increment(Int64(1)),   // web canonical
+             "followerCount":  FieldValue.increment(Int64(1))],  // ios eski
             forDocument: db.collection("users").document(targetUserId)
         )
 
@@ -183,7 +197,8 @@ class SocialService: ObservableObject {
             forDocument: db.collection("users").document(currentUserId)
         )
         batch.updateData(
-            ["followerCount": FieldValue.increment(Int64(-1))],
+            ["followersCount": FieldValue.increment(Int64(-1)),
+             "followerCount":  FieldValue.increment(Int64(-1))],
             forDocument: db.collection("users").document(targetUserId)
         )
 
@@ -311,17 +326,17 @@ class SocialService: ObservableObject {
         // Gönderiyi sil
         batch.deleteDocument(db.collection("posts").document(post.id))
 
-        // postCount'u düşür
+        // Her iki sayaç adını düşür
         batch.updateData(
-            ["postCount": FieldValue.increment(Int64(-1))],
+            ["postsCount": FieldValue.increment(Int64(-1)),  // web canonical
+             "postCount":  FieldValue.increment(Int64(-1))], // ios eski
             forDocument: db.collection("users").document(post.userId)
         )
 
         batch.commit { error in
             if error == nil {
-                // İlişkili beğenileri arka planda temizle (non-blocking)
-                self.db.collection("likes")
-                    .whereField("postId", isEqualTo: post.id)
+                // İlişkili beğenileri arka planda temizle — posts/{id}/likes subkoleksiyonu
+                self.db.collection("posts").document(post.id).collection("likes")
                     .getDocuments { snapshot, _ in
                         snapshot?.documents.forEach { $0.reference.delete() }
                     }

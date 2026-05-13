@@ -135,7 +135,10 @@ class FeedService: ObservableObject {
                     DispatchQueue.main.async { self.isLoading = false }
                     if error == nil {
                         self.db.collection("users").document(user.id)
-                            .updateData(["postCount": FieldValue.increment(Int64(1))])
+                            .updateData([
+                                "postsCount": FieldValue.increment(Int64(1)),  // web canonical
+                                "postCount":  FieldValue.increment(Int64(1))   // ios eski
+                            ])
                     }
                     completion(error)
                 }
@@ -200,12 +203,15 @@ class FeedService: ObservableObject {
         let group = DispatchGroup()
 
         for i in enriched.indices {
-            let likeId = "\(userId)_\(enriched[i].id)"
+            let postId = enriched[i].id
             group.enter()
-            db.collection("likes").document(likeId).getDocument { snapshot, _ in
-                if snapshot?.exists == true { enriched[i].isLiked = true }
-                group.leave()
-            }
+            // Web ile aynı yapı: posts/{postId}/likes/{userId}
+            db.collection("posts").document(postId)
+                .collection("likes").document(userId)
+                .getDocument { snapshot, _ in
+                    if snapshot?.exists == true { enriched[i].isLiked = true }
+                    group.leave()
+                }
         }
 
         group.notify(queue: .main) { completion(enriched) }
