@@ -1,5 +1,6 @@
 import SwiftUI
 import PencilKit
+import UIKit
 
 struct SharePostView: View {
     @Environment(\.dismiss) private var dismiss
@@ -9,17 +10,63 @@ struct SharePostView: View {
     let drawing: PKDrawing
     let emotion: EmotionState
     let bpm: Int
+    let bgType: CanvasBgType
+    let bgColor: UIColor
 
     @State private var caption = ""
     @State private var isPosting = false
     @State private var errorMessage: String? = nil
     @FocusState private var captionFocused: Bool
 
+    /// Çizimi, arka plan rengi ve desen (kare/çizgili) ile birlikte birleştirir.
     private var thumbnail: UIImage? {
-        let bounds = drawing.strokes.isEmpty
-            ? CGRect(x: 0, y: 0, width: 400, height: 300)
+        let drawingBounds = drawing.strokes.isEmpty
+            ? CGRect(x: 0, y: 0, width: 400, height: 400)
             : drawing.bounds.insetBy(dx: -30, dy: -30)
-        return drawing.image(from: bounds, scale: 2.0)
+
+        let renderer = UIGraphicsImageRenderer(bounds: drawingBounds)
+        return renderer.image { ctx in
+            let cgCtx = ctx.cgContext
+
+            // 1. Arka plan rengini doldur
+            bgColor.setFill()
+            cgCtx.fill(drawingBounds)
+
+            // 2. Desen çiz (grid / lined)
+            if bgType != .blank {
+                UIColor.label.withAlphaComponent(0.15).setStroke()
+                cgCtx.setLineWidth(0.5)
+
+                if bgType == .grid {
+                    let spacing: CGFloat = 24
+                    let cols = Int(ceil(drawingBounds.width  / spacing))
+                    let rows = Int(ceil(drawingBounds.height / spacing))
+                    for i in 0...cols {
+                        let x = drawingBounds.minX + CGFloat(i) * spacing
+                        cgCtx.move(to: CGPoint(x: x, y: drawingBounds.minY))
+                        cgCtx.addLine(to: CGPoint(x: x, y: drawingBounds.maxY))
+                    }
+                    for i in 0...rows {
+                        let y = drawingBounds.minY + CGFloat(i) * spacing
+                        cgCtx.move(to: CGPoint(x: drawingBounds.minX, y: y))
+                        cgCtx.addLine(to: CGPoint(x: drawingBounds.maxX, y: y))
+                    }
+                } else { // .lined
+                    let spacing: CGFloat = 30
+                    let rows = Int(ceil(drawingBounds.height / spacing))
+                    for i in 0...rows {
+                        let y = drawingBounds.minY + CGFloat(i) * spacing
+                        cgCtx.move(to: CGPoint(x: drawingBounds.minX, y: y))
+                        cgCtx.addLine(to: CGPoint(x: drawingBounds.maxX, y: y))
+                    }
+                }
+                cgCtx.strokePath()
+            }
+
+            // 3. PencilKit çizimlerini üstüne çiz
+            let strokesImage = drawing.image(from: drawingBounds, scale: UIScreen.main.scale)
+            strokesImage.draw(in: drawingBounds)
+        }
     }
 
     var body: some View {

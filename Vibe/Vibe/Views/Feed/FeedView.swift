@@ -61,13 +61,12 @@ struct FeedView: View {
                                     .frame(maxWidth: .infinity)
                             }
 
-                            // ── Sayfalama alt satırı (yalnızca Keşfet) ──
-                            if selectedTab == 1 {
-                                Group {
+                            // ── Sayfalama alt satırı ──
+                            Group {
+                                if selectedTab == 1 {
+                                    // Keşfet
                                     if feedService.isLoadingMore {
-                                        ProgressView()
-                                            .tint(AppColor.accent)
-                                            .frame(maxWidth: .infinity)
+                                        ProgressView().tint(AppColor.accent).frame(maxWidth: .infinity)
                                     } else if feedService.hasMoreDiscover {
                                         Button {
                                             let uid = authService.firebaseUser?.uid ?? ""
@@ -84,9 +83,28 @@ struct FeedView: View {
                                             .foregroundColor(AppColor.inkSubtle)
                                             .frame(maxWidth: .infinity)
                                     }
+                                } else {
+                                    // Takip
+                                    if feedService.isLoadingMoreFeed {
+                                        ProgressView().tint(AppColor.accent).frame(maxWidth: .infinity)
+                                    } else if feedService.hasMoreFeed {
+                                        Button {
+                                            feedService.loadMoreFeed()
+                                        } label: {
+                                            Text("Daha Fazla Yükle")
+                                                .font(.system(size: 14, weight: .semibold))
+                                                .foregroundColor(AppColor.accent)
+                                                .frame(maxWidth: .infinity)
+                                        }
+                                    } else {
+                                        Text("Tüm gönderiler yüklendi")
+                                            .font(.caption)
+                                            .foregroundColor(AppColor.inkSubtle)
+                                            .frame(maxWidth: .infinity)
+                                    }
                                 }
-                                .padding(.vertical, AppSpacing.md)
                             }
+                            .padding(.vertical, AppSpacing.md)
                         }
                     }
                 }

@@ -113,7 +113,9 @@ struct CanvasView: View {
             SharePostView(
                 drawing: canvasView.drawing,
                 emotion: biometricService.currentEmotion,
-                bpm: biometricService.currentBPM
+                bpm: biometricService.currentBPM,
+                bgType: bgType,
+                bgColor: UIColor(customBgColor)
             )
             .environmentObject(AuthService.shared)
         }

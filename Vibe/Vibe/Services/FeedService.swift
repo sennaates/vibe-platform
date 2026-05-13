@@ -10,11 +10,16 @@ class FeedService: ObservableObject {
     @Published var isLoading = false
     @Published var isLoadingMore = false
     @Published var hasMoreDiscover = true
+    @Published var isLoadingMoreFeed = false
+    @Published var hasMoreFeed = true
 
     private let db = Firestore.firestore()
     private var discoverListener: ListenerRegistration?
     private var feedListener: ListenerRegistration?
     private var lastDiscoverDoc: DocumentSnapshot? = nil
+    private var lastFeedDoc: DocumentSnapshot? = nil
+    private var currentFollowingIds: [String] = []
+    private var currentFeedUserId: String = ""
     private let pageSize = 20
 
     // MARK: - Cloudinary Ayarları
@@ -74,19 +79,52 @@ class FeedService: ObservableObject {
 
     func startFeedListener(followingIds: [String], currentUserId: String) {
         feedListener?.remove()
-        guard !followingIds.isEmpty else { feedPosts = []; return }
-        let ids = Array(followingIds.prefix(30))
-        feedListener = db.collection("posts")
-            .whereField("userId", in: ids)
+        feedListener = nil
+        feedPosts = []
+        lastFeedDoc = nil
+        hasMoreFeed = true
+        guard !followingIds.isEmpty else { return }
+
+        // Firestore "in" en fazla 30 eleman destekler
+        currentFollowingIds = Array(followingIds.prefix(30))
+        currentFeedUserId = currentUserId
+
+        db.collection("posts")
+            .whereField("userId", in: currentFollowingIds)
             .order(by: "createdAt", descending: true)
-            .limit(to: 50)
-            .addSnapshotListener { [weak self] snapshot, _ in
-                guard let self else { return }
-                var posts = snapshot?.documents.compactMap {
-                    Post.from($0.data(), id: $0.documentID)
-                } ?? []
+            .limit(to: Int64(pageSize))
+            .getDocuments { [weak self] snap, _ in
+                guard let self, let snap else { return }
+                self.lastFeedDoc = snap.documents.last
+                self.hasMoreFeed = snap.documents.count == self.pageSize
+                var posts = snap.documents.compactMap { Post.from($0.data(), id: $0.documentID) }
                 self.enrichWithLikes(posts: &posts, userId: currentUserId) { enriched in
                     self.feedPosts = enriched
+                }
+            }
+    }
+
+    func loadMoreFeed() {
+        guard !isLoadingMoreFeed, hasMoreFeed,
+              let lastDoc = lastFeedDoc,
+              !currentFollowingIds.isEmpty else { return }
+        isLoadingMoreFeed = true
+        db.collection("posts")
+            .whereField("userId", in: currentFollowingIds)
+            .order(by: "createdAt", descending: true)
+            .start(afterDocument: lastDoc)
+            .limit(to: Int64(pageSize))
+            .getDocuments { [weak self] snap, _ in
+                guard let self, let snap else {
+                    self?.isLoadingMoreFeed = false
+                    return
+                }
+                self.lastFeedDoc = snap.documents.last ?? self.lastFeedDoc
+                self.hasMoreFeed = snap.documents.count == self.pageSize
+                var newPosts = snap.documents.compactMap { Post.from($0.data(), id: $0.documentID) }
+                self.enrichWithLikes(posts: &newPosts, userId: self.currentFeedUserId) { enriched in
+                    self.feedPosts.append(contentsOf: enriched)
+                    self.isLoadingMoreFeed = false
                 }
             }
     }

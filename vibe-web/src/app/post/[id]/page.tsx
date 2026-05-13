@@ -358,7 +358,12 @@ export default function PostDetailPage({ params }: { params: Promise<{ id: strin
                           )}
                         </div>
                       </div>
-                      <p className="text-sm text-ink mt-0.5 leading-relaxed break-words">{c.text}</p>
+                      {c.replyToName && (
+                        <p className="text-[11px] text-accent font-medium mt-0.5 mb-0.5">
+                          ↩ @{c.replyToName}
+                        </p>
+                      )}
+                      <p className="text-sm text-ink leading-relaxed break-words">{c.text}</p>
                     </div>
                   </div>
                 ))
