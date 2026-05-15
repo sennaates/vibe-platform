@@ -9,6 +9,7 @@ struct GalleryView: View {
 
     @State private var isShowingStats = false
     @State private var selectedRecord: DrawingRecord?
+    @State private var shareRecord: DrawingRecord?   // "Akışa paylaş" hedefi
 
     private var columns: [GridItem] {
         let count = sizeClass == .regular ? 3 : 2
@@ -49,6 +50,16 @@ struct GalleryView: View {
             .sheet(item: $selectedRecord) { record in
                 DrawingDetailView(record: record)
             }
+            .sheet(item: $shareRecord) { record in
+                SharePostView(
+                    drawing:  record.drawing ?? PKDrawing(),
+                    emotion:  record.emotion,
+                    bpm:      record.bpmHistory.last?.bpm ?? 72,
+                    bgType:   .blank,
+                    bgColor:  UIColor.systemBackground
+                )
+                .environmentObject(authService)
+            }
         }
     }
 
@@ -82,9 +93,9 @@ struct GalleryView: View {
 
             LazyVGrid(columns: columns, spacing: 12) {
                 ForEach(galleryStore.records) { record in
-                    GalleryCard(record: record) {
-                        galleryStore.delete(record: record)
-                    }
+                    GalleryCard(record: record,
+                                onShare: { shareRecord = record },
+                                onDelete: { galleryStore.delete(record: record) })
                     .onTapGesture {
                         HapticManager.impact(.light)
                         selectedRecord = record
@@ -100,10 +111,11 @@ struct GalleryView: View {
 
 private struct GalleryCard: View {
     let record: DrawingRecord
+    let onShare: () -> Void      // Akışa paylaş
     let onDelete: () -> Void
 
     @State private var shareImage: UIImage?
-    @State private var isShowingShare = false
+    @State private var isShowingSystemShare = false
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
@@ -130,34 +142,56 @@ private struct GalleryCard: View {
                     .strokeBorder(record.emotion.color.opacity(0.15), lineWidth: 1)
             )
 
-            // Bilgi
+            // Bilgi + Hızlı paylaş butonu
             HStack(spacing: 5) {
                 Text(record.emotion.emoji).font(.system(size: 12))
                 Text(record.emotion.displayName)
                     .font(.system(size: 11, weight: .semibold))
                     .foregroundColor(record.emotion.color)
                 Spacer()
-                Text(record.date, style: .date)
-                    .font(.system(size: 10))
-                    .foregroundColor(AppColor.inkMuted)
+                // Akışa paylaş ikonu
+                Button {
+                    HapticManager.impact(.light)
+                    onShare()
+                } label: {
+                    Image(systemName: "paperplane.fill")
+                        .font(.system(size: 11, weight: .semibold))
+                        .foregroundColor(AppColor.accent)
+                        .padding(6)
+                        .background(AppColor.accent.opacity(0.1))
+                        .clipShape(Circle())
+                }
+                .buttonStyle(.plain)
             }
             .padding(.horizontal, 4)
             .padding(.top, 8)
         }
         .contextMenu {
+            // Akışa paylaş
+            Button {
+                HapticManager.impact(.light)
+                onShare()
+            } label: {
+                Label("Akışa Paylaş", systemImage: "paperplane")
+            }
+
+            // Sistem paylaşım
             Button {
                 if let img = record.thumbnail(size: CGSize(width: 1200, height: 900)) {
                     shareImage = img
-                    isShowingShare = true
+                    isShowingSystemShare = true
                 }
             } label: {
-                Label("Paylaş", systemImage: "square.and.arrow.up")
+                Label("Görsel Olarak Paylaş", systemImage: "square.and.arrow.up")
             }
+
+            Divider()
+
             Button(role: .destructive, action: onDelete) {
                 Label("Sil", systemImage: "trash")
             }
         }
-        .sheet(isPresented: $isShowingShare) {
+        .sheet(isPresented: $isShowingSystemShare) {
             if let img = shareImage {
                 ShareSheet(items: [img])
             }

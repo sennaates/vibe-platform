@@ -1,11 +1,12 @@
 "use client"
 
-import { use, useEffect, useState } from "react"
+import { use, useCallback, useEffect, useRef, useState } from "react"
 import Image from "next/image"
 import Link from "next/link"
 import {
   doc, getDoc, collection, query, where, orderBy, getDocs,
-  setDoc, deleteDoc, updateDoc, increment, serverTimestamp
+  setDoc, deleteDoc, updateDoc, increment, serverTimestamp,
+  limit, startAfter, QueryDocumentSnapshot
 } from "firebase/firestore"
 import { Grid3X3, Heart } from "lucide-react"
 import { useRouter } from "next/navigation"
@@ -33,6 +34,10 @@ export default function ProfilePage({ params }: { params: Promise<{ uid: string 
   const [profileTab, setProfileTab]         = useState<"posts" | "liked">("posts")
   const [likedPosts, setLikedPosts]         = useState<NormalizedPost[]>([])
   const [likedLoading, setLikedLoading]     = useState(false)
+  const [hasMorePosts, setHasMorePosts]     = useState(true)
+  const [loadingMorePosts, setLoadingMorePosts] = useState(false)
+  const lastPostDocRef = useRef<QueryDocumentSnapshot | null>(null)
+  const postSentinelRef = useRef<HTMLDivElement>(null)
 
   const isOwn  = user?.uid === uid
   const accent = profileColors[pageProfile?.profileColor ?? "blue"] ?? "#4A7FA5"
@@ -51,8 +56,10 @@ export default function ProfilePage({ params }: { params: Promise<{ uid: string 
       } as SocialUser
       setPageProfile(data)
       setLocalFollowers(data.followersCount)
-      const q = query(collection(db, "posts"), where("userId", "==", uid), orderBy("createdAt", "desc"))
+      const q = query(collection(db, "posts"), where("userId", "==", uid), orderBy("createdAt", "desc"), limit(30))
       const postSnap = await getDocs(q)
+      lastPostDocRef.current = postSnap.docs[postSnap.docs.length - 1] ?? null
+      setHasMorePosts(postSnap.docs.length === 30)
       setPosts(postSnap.docs.map(d => (normalizePost({ id: d.id, ...d.data() } as Parameters<typeof normalizePost>[0]))))
       setLoading(false)
     }
@@ -63,6 +70,34 @@ export default function ProfilePage({ params }: { params: Promise<{ uid: string 
     if (!user || isOwn) return
     getDoc(doc(db, "follows", `${user.uid}_${uid}`)).then(snap => setFollowing(snap.exists()))
   }, [user, uid, isOwn])
+
+  const loadMorePosts = useCallback(async () => {
+    if (loadingMorePosts || !hasMorePosts || !lastPostDocRef.current) return
+    setLoadingMorePosts(true)
+    const q = query(
+      collection(db, "posts"),
+      where("userId", "==", uid),
+      orderBy("createdAt", "desc"),
+      startAfter(lastPostDocRef.current),
+      limit(30)
+    )
+    const snap = await getDocs(q)
+    lastPostDocRef.current = snap.docs[snap.docs.length - 1] ?? null
+    setHasMorePosts(snap.docs.length === 30)
+    setPosts(prev => [...prev, ...snap.docs.map(d => normalizePost({ id: d.id, ...d.data() } as Parameters<typeof normalizePost>[0]))])
+    setLoadingMorePosts(false)
+  }, [loadingMorePosts, hasMorePosts, uid])
+
+  useEffect(() => {
+    const el = postSentinelRef.current
+    if (!el || profileTab !== "posts") return
+    const obs = new IntersectionObserver(
+      entries => { if (entries[0].isIntersecting) loadMorePosts() },
+      { rootMargin: "200px" }
+    )
+    obs.observe(el)
+    return () => obs.disconnect()
+  }, [loadMorePosts, profileTab])
 
   // Load liked posts on tab switch
   useEffect(() => {
@@ -251,7 +286,15 @@ export default function ProfilePage({ params }: { params: Promise<{ uid: string 
                 )}
               </div>
             ) : (
-              <PostGrid posts={posts} />
+              <>
+                <PostGrid posts={posts} />
+                <div ref={postSentinelRef} className="flex justify-center py-4">
+                  {loadingMorePosts && <Loader2 size={20} className="animate-spin text-ink-subtle" />}
+                  {!hasMorePosts && posts.length >= 30 && (
+                    <p className="text-xs text-ink-subtle">Tüm çizimler yüklendi</p>
+                  )}
+                </div>
+              </>
             )
           ) : (
             likedLoading ? (
