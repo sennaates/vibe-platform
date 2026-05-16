@@ -54,7 +54,7 @@ struct StatsView: View {
     private var topTags: [(tag: String, count: Int)] {
         var map: [String: Int] = [:]
         posts.forEach { $0.extractedTags.forEach { map[$0, default: 0] += 1 } }
-        return map.map { ($0.key, $0.value) }.sorted { $0.count > $1.count }.prefix(10).map { $0 }
+        return map.map { (tag: $0.key, count: $0.value) }.sorted { $0.count > $1.count }.prefix(10).map { $0 }
     }
 
     // Son 30 post BPM verisi (kronolojik)

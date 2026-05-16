@@ -55,8 +55,8 @@ struct GalleryView: View {
                     drawing:  record.drawing ?? PKDrawing(),
                     emotion:  record.emotion,
                     bpm:      record.bpmHistory.last?.bpm ?? 72,
-                    bgType:   .blank,
-                    bgColor:  UIColor.systemBackground
+                    bgType:   record.bgType,
+                    bgColor:  record.bgUIColor
                 )
                 .environmentObject(authService)
             }

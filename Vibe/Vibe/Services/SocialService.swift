@@ -230,12 +230,76 @@ class SocialService: ObservableObject {
         db.collection("posts")
             .whereField("userId", isEqualTo: userId)
             .order(by: "createdAt", descending: true)
+            .limit(to: 30)
             .getDocuments { snapshot, _ in
                 let posts = snapshot?.documents.compactMap {
                     Post.from($0.data(), id: $0.documentID)
                 } ?? []
                 completion(posts)
             }
+    }
+
+    /// Cursor-based sayfalama ile kullanıcı gönderileri
+    func fetchUserPostsPaginated(
+        userId: String,
+        limit: Int = 30,
+        after lastDoc: DocumentSnapshot? = nil,
+        completion: @escaping ([Post], DocumentSnapshot?) -> Void
+    ) {
+        var query = db.collection("posts")
+            .whereField("userId", isEqualTo: userId)
+            .order(by: "createdAt", descending: true)
+            .limit(to: limit)
+
+        if let lastDoc {
+            query = query.start(afterDocument: lastDoc)
+        }
+
+        query.getDocuments { snapshot, _ in
+            let docs  = snapshot?.documents ?? []
+            let posts = docs.compactMap { Post.from($0.data(), id: $0.documentID) }
+            completion(posts, docs.last)
+        }
+    }
+
+    /// Kullanıcının beğendiği gönderiler — cursor-based sayfalama
+    func fetchLikedPostsPaginated(
+        userId: String,
+        limit: Int = 30,
+        after lastDoc: DocumentSnapshot? = nil,
+        completion: @escaping ([Post], DocumentSnapshot?) -> Void
+    ) {
+        var query = db.collection("userLikes").document(userId).collection("items")
+            .order(by: "likedAt", descending: true)
+            .limit(to: limit)
+
+        if let lastDoc {
+            query = query.start(afterDocument: lastDoc)
+        }
+
+        query.getDocuments { [weak self] snapshot, _ in
+            guard let self else { return }
+            let docs    = snapshot?.documents ?? []
+            let lastRef = docs.last
+            let ids     = docs.compactMap { $0.data()["postId"] as? String }
+
+            guard !ids.isEmpty else { completion([], nil); return }
+
+            // Firestore `in` sorgusu — maks 30 ID (Firestore limiti 30)
+            self.db.collection("posts")
+                .whereField(FieldPath.documentID(), in: ids)
+                .getDocuments { snap, _ in
+                    let postMap = Dictionary(
+                        uniqueKeysWithValues: (snap?.documents ?? []).compactMap { doc -> (String, Post)? in
+                            guard let post = Post.from(doc.data(), id: doc.documentID) else { return nil }
+                            return (doc.documentID, post)
+                        }
+                    )
+                    // Beğeni sırasını koru
+                    let ordered = ids.compactMap { postMap[$0] }
+                    completion(ordered, lastRef)
+                }
+        }
     }
 
     // MARK: - Kullanıcı Ara

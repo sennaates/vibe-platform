@@ -1,5 +1,6 @@
 import Foundation
 import PencilKit
+import UIKit
 
 class GalleryStore: ObservableObject {
     @Published var records: [DrawingRecord] = []
@@ -12,8 +13,20 @@ class GalleryStore: ObservableObject {
         load()
     }
 
-    func save(drawing: PKDrawing, emotion: EmotionState, bpmHistory: [BpmSample] = []) {
-        let record = DrawingRecord(emotion: emotion, drawing: drawing, bpmHistory: bpmHistory)
+    func save(
+        drawing: PKDrawing,
+        emotion: EmotionState,
+        bpmHistory: [BpmSample] = [],
+        bgType: CanvasBgType = .blank,
+        bgColor: UIColor = .systemBackground
+    ) {
+        let record = DrawingRecord(
+            emotion: emotion,
+            drawing: drawing,
+            bpmHistory: bpmHistory,
+            bgType: bgType,
+            bgColorHex: bgColor.hexString
+        )
         records.insert(record, at: 0)
         persist()
     }

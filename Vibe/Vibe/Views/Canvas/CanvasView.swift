@@ -432,7 +432,13 @@ struct CanvasView: View {
             return
         }
         let bpmHistory = biometricService.snapshotBpmHistory()
-        galleryStore.save(drawing: canvasView.drawing, emotion: biometricService.currentEmotion, bpmHistory: bpmHistory)
+        galleryStore.save(
+            drawing:    canvasView.drawing,
+            emotion:    biometricService.currentEmotion,
+            bpmHistory: bpmHistory,
+            bgType:     bgType,
+            bgColor:    UIColor(customBgColor)
+        )
         HapticManager.notification(.success)
         withAnimation(.spring(response: 0.4, dampingFraction: 0.7)) { savedFeedback = true }
         DispatchQueue.main.asyncAfter(deadline: .now() + 2) {

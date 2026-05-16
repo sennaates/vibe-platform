@@ -36,7 +36,7 @@ class FeedService: ObservableObject {
         hasMoreDiscover = true
         discoverListener = db.collection("posts")
             .order(by: "createdAt", descending: true)
-            .limit(to: Int64(pageSize))
+            .limit(to: pageSize)
             .addSnapshotListener { [weak self] snapshot, _ in
                 guard let self, let snap = snapshot else { return }
                 self.lastDiscoverDoc = snap.documents.last
@@ -57,7 +57,7 @@ class FeedService: ObservableObject {
         db.collection("posts")
             .order(by: "createdAt", descending: true)
             .start(afterDocument: lastDoc)
-            .limit(to: Int64(pageSize))
+            .limit(to: pageSize)
             .getDocuments { [weak self] snapshot, _ in
                 guard let self, let snap = snapshot else {
                     self?.isLoadingMore = false
@@ -92,7 +92,7 @@ class FeedService: ObservableObject {
         db.collection("posts")
             .whereField("userId", in: currentFollowingIds)
             .order(by: "createdAt", descending: true)
-            .limit(to: Int64(pageSize))
+            .limit(to: pageSize)
             .getDocuments { [weak self] snap, _ in
                 guard let self, let snap else { return }
                 self.lastFeedDoc = snap.documents.last
@@ -113,7 +113,7 @@ class FeedService: ObservableObject {
             .whereField("userId", in: currentFollowingIds)
             .order(by: "createdAt", descending: true)
             .start(afterDocument: lastDoc)
-            .limit(to: Int64(pageSize))
+            .limit(to: pageSize)
             .getDocuments { [weak self] snap, _ in
                 guard let self, let snap else {
                     self?.isLoadingMoreFeed = false

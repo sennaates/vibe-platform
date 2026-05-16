@@ -83,7 +83,7 @@ struct HashtagFeedView: View {
         db.collection("posts")
             .whereField("tags", arrayContains: tag)
             .order(by: "createdAt", descending: true)
-            .limit(to: Int64(pageSize))
+            .limit(to: pageSize)
             .getDocuments { snap, _ in
                 guard let snap else { isLoading = false; return }
                 lastDoc = snap.documents.last
@@ -105,7 +105,7 @@ struct HashtagFeedView: View {
             .whereField("tags", arrayContains: tag)
             .order(by: "createdAt", descending: true)
             .start(afterDocument: last)
-            .limit(to: Int64(pageSize))
+            .limit(to: pageSize)
             .getDocuments { snap, _ in
                 guard let snap else { isLoadingMore = false; return }
                 lastDoc = snap.documents.last ?? lastDoc

@@ -59,7 +59,7 @@ struct FeedView: View {
                                     .padding(.horizontal, sizeClass == .regular ? AppSpacing.xxl : AppSpacing.md)
                                     .frame(maxWidth: sizeClass == .regular ? 680 : .infinity)
                                     .frame(maxWidth: .infinity)
-                            }
+                                }
 
                             // ── Sayfalama alt satırı ──
                             Group {
@@ -108,7 +108,8 @@ struct FeedView: View {
                         }
                     }
                 }
-            }
+            }   // if isLoading/else
+            }   // VStack
             .background(AppColor.canvas.ignoresSafeArea())
             .navigationTitle("Akış")
             .navigationDestination(item: $selectedPost) { post in
@@ -139,8 +140,8 @@ struct FeedView: View {
                 HashtagFeedView(tag: item.tag)
                     .environmentObject(authService)
             }
-        }
-    }
+        }   // NavigationStack
+    }   // body
 
     // MARK: - Tab Seçici (Claude tarzı segmented)
 

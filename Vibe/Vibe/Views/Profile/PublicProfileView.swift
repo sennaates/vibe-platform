@@ -6,14 +6,30 @@ struct PublicProfileView: View {
     let userId: String
 
     @State private var user: SocialUser? = nil
-    @State private var posts: [Post] = []
     @State private var isFollowing = false
     @State private var isLoading = true
     @State private var selectedPost: Post? = nil
     @State private var followLoading = false
     @State private var hashtagNavTag: HashtagNavItem? = nil
 
+    // Sekmeler (kendi profili için ikinci sekme görünür)
+    @State private var selectedTab = 0   // 0 = gönderiler, 1 = beğendikleri
+
+    // Gönderi sayfalama
+    @State private var posts: [Post] = []
+    @State private var lastPostDoc: DocumentSnapshot? = nil
+    @State private var hasMorePosts = false
+    @State private var isLoadingMorePosts = false
+
+    // Beğenilen gönderi sayfalama
+    @State private var likedPosts: [Post] = []
+    @State private var lastLikedDoc: DocumentSnapshot? = nil
+    @State private var hasMoreLiked = false
+    @State private var isLoadingMoreLiked = false
+
     @Environment(\.horizontalSizeClass) private var sizeClass
+
+    private let pageSize = 30
 
     private var columns: [GridItem] {
         let count = sizeClass == .regular ? 4 : 3
@@ -130,8 +146,22 @@ struct PublicProfileView: View {
                         .padding(.horizontal, sizeClass == .regular ? 60 : 20)
                         .frame(maxWidth: sizeClass == .regular ? 500 : .infinity)
                 }
+
+                // Sekme seçici — kendi profili için göster
+                if isOwnProfile {
+                    Picker("", selection: $selectedTab) {
+                        Image(systemName: "square.grid.3x3").tag(0)
+                        Image(systemName: "heart").tag(1)
+                    }
+                    .pickerStyle(.segmented)
+                    .padding(.horizontal, sizeClass == .regular ? 60 : 20)
+                    .frame(maxWidth: sizeClass == .regular ? 500 : .infinity)
+                    .onChange(of: selectedTab) { _, tab in
+                        if tab == 1 && likedPosts.isEmpty { loadLikedPosts() }
+                    }
+                }
             }
-            .padding(.bottom, 20)
+            .padding(.bottom, 12)
         }
     }
 
@@ -189,44 +219,72 @@ struct PublicProfileView: View {
     // MARK: - Gönderiler Grid
 
     private var postsSection: some View {
-        VStack(alignment: .leading, spacing: 0) {
-            if posts.isEmpty {
+        VStack(spacing: 0) {
+            Divider()
+
+            let displayedPosts = selectedTab == 0 ? posts : likedPosts
+            let isEmpty        = displayedPosts.isEmpty
+
+            if isEmpty {
                 VStack(spacing: 12) {
-                    Image(systemName: "photo.on.rectangle.angled")
+                    Image(systemName: selectedTab == 0 ? "photo.on.rectangle.angled" : "heart.slash")
                         .font(.system(size: 40))
                         .foregroundColor(.secondary.opacity(0.4))
-                    Text("Henüz gönderi yok")
+                    Text(selectedTab == 0 ? "Henüz gönderi yok" : "Henüz beğenilen gönderi yok")
                         .font(.subheadline)
                         .foregroundColor(.secondary)
                 }
                 .frame(maxWidth: .infinity)
                 .padding(60)
             } else {
-                Divider()
                 LazyVGrid(columns: columns, spacing: 2) {
-                    ForEach(posts) { post in
-                        AsyncImage(url: URL(string: post.imageURL)) { phase in
-                            Group {
-                                if case .success(let img) = phase {
-                                    img.resizable().scaledToFill()
-                                } else {
-                                    Rectangle()
-                                        .fill(post.emotion.color.opacity(0.15))
-                                        .overlay(
-                                            Text(post.emotion.emoji)
-                                                .font(.title)
-                                        )
-                                }
-                            }
-                        }
-                        .aspectRatio(1, contentMode: .fill)
-                        .clipped()
-                        .contentShape(Rectangle())
-                        .onTapGesture { selectedPost = post }
+                    ForEach(displayedPosts) { post in
+                        postCell(post)
                     }
+                }
+
+                // Load-more footer
+                let hasMore     = selectedTab == 0 ? hasMorePosts     : hasMoreLiked
+                let isLoading   = selectedTab == 0 ? isLoadingMorePosts : isLoadingMoreLiked
+
+                if hasMore {
+                    Button {
+                        if selectedTab == 0 { loadMorePosts() } else { loadMoreLikedPosts() }
+                    } label: {
+                        if isLoading {
+                            ProgressView()
+                                .padding(.vertical, 20)
+                        } else {
+                            Text("Daha Fazla")
+                                .font(.subheadline.weight(.medium))
+                                .foregroundColor(.secondary)
+                                .padding(.vertical, 20)
+                        }
+                    }
+                    .frame(maxWidth: .infinity)
+                    .disabled(isLoading)
                 }
             }
         }
+    }
+
+    @ViewBuilder
+    private func postCell(_ post: Post) -> some View {
+        AsyncImage(url: URL(string: post.imageURL)) { phase in
+            Group {
+                if case .success(let img) = phase {
+                    img.resizable().scaledToFill()
+                } else {
+                    Rectangle()
+                        .fill(post.emotion.color.opacity(0.15))
+                        .overlay(Text(post.emotion.emoji).font(.title))
+                }
+            }
+        }
+        .aspectRatio(1, contentMode: .fill)
+        .clipped()
+        .contentShape(Rectangle())
+        .onTapGesture { selectedPost = post }
     }
 
     // MARK: - Veri Yükleme
@@ -243,8 +301,10 @@ struct PublicProfileView: View {
         }
 
         group.enter()
-        SocialService.shared.fetchUserPosts(userId: userId) { fetched in
-            self.posts = fetched
+        SocialService.shared.fetchUserPostsPaginated(userId: userId, limit: pageSize) { fetched, last in
+            self.posts       = fetched
+            self.lastPostDoc = last
+            self.hasMorePosts = fetched.count == self.pageSize
             group.leave()
         }
 
@@ -257,6 +317,39 @@ struct PublicProfileView: View {
         }
 
         group.notify(queue: .main) { self.isLoading = false }
+    }
+
+    private func loadMorePosts() {
+        guard hasMorePosts, !isLoadingMorePosts else { return }
+        isLoadingMorePosts = true
+        SocialService.shared.fetchUserPostsPaginated(userId: userId, limit: pageSize, after: lastPostDoc) { fetched, last in
+            self.posts.append(contentsOf: fetched)
+            self.lastPostDoc       = last
+            self.hasMorePosts      = fetched.count == self.pageSize
+            self.isLoadingMorePosts = false
+        }
+    }
+
+    private func loadLikedPosts() {
+        guard !isLoadingMoreLiked else { return }
+        isLoadingMoreLiked = true
+        SocialService.shared.fetchLikedPostsPaginated(userId: userId, limit: pageSize) { fetched, last in
+            self.likedPosts    = fetched
+            self.lastLikedDoc  = last
+            self.hasMoreLiked  = fetched.count == self.pageSize
+            self.isLoadingMoreLiked = false
+        }
+    }
+
+    private func loadMoreLikedPosts() {
+        guard hasMoreLiked, !isLoadingMoreLiked else { return }
+        isLoadingMoreLiked = true
+        SocialService.shared.fetchLikedPostsPaginated(userId: userId, limit: pageSize, after: lastLikedDoc) { fetched, last in
+            self.likedPosts.append(contentsOf: fetched)
+            self.lastLikedDoc       = last
+            self.hasMoreLiked       = fetched.count == self.pageSize
+            self.isLoadingMoreLiked = false
+        }
     }
 
     // MARK: - Aksiyonlar

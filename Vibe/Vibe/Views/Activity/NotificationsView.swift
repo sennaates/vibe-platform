@@ -1,4 +1,5 @@
 import SwiftUI
+import FirebaseFirestore
 
 struct NotificationsView: View {
     @EnvironmentObject var authService: AuthService

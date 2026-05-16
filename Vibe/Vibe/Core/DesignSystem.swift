@@ -100,6 +100,25 @@ extension Color {
     }
 }
 
+extension UIColor {
+    /// `"#D9723F"` veya `"D9723F"` formatında hex string'den UIColor oluşturur
+    convenience init?(hex: String) {
+        let hex = hex.trimmingCharacters(in: .init(charactersIn: "#"))
+        guard hex.count == 6, let rgb = UInt64(hex, radix: 16) else { return nil }
+        let r = CGFloat((rgb >> 16) & 0xFF) / 255
+        let g = CGFloat((rgb >> 8)  & 0xFF) / 255
+        let b = CGFloat(rgb         & 0xFF) / 255
+        self.init(red: r, green: g, blue: b, alpha: 1)
+    }
+
+    /// UIColor → "#RRGGBB" hex string
+    var hexString: String {
+        var r: CGFloat = 0, g: CGFloat = 0, b: CGFloat = 0, a: CGFloat = 0
+        getRed(&r, green: &g, blue: &b, alpha: &a)
+        return String(format: "#%02X%02X%02X", Int(r * 255), Int(g * 255), Int(b * 255))
+    }
+}
+
 // MARK: - Yeniden Kullanılabilir Bileşenler
 
 /// Standart bölüm başlığı (başlık + açıklama)
