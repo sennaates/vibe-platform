@@ -157,8 +157,8 @@ export function Feed() {
     return (
       <section>
         {sortBar}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-5">
-          {[...Array(6)].map((_, i) => <PostSkeleton key={i} />)}
+        <div className="flex flex-col gap-4 sm:gap-5">
+          {[...Array(4)].map((_, i) => <PostSkeleton key={i} />)}
         </div>
       </section>
     )
@@ -196,7 +196,7 @@ export function Feed() {
   return (
     <section>
       {sortBar}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-5">
+      <div className="flex flex-col gap-4 sm:gap-5">
         {posts.map(post => (
           <PostCard key={post.id} post={post} isLiked={liked.has(post.id)} />
         ))}

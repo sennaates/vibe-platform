@@ -58,7 +58,7 @@ export default function StatsPage() {
 
   if (loading || fetching) {
     return (
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 animate-pulse space-y-5">
+      <div className="max-w-4xl mx-auto px-4 sm:px-6 py-6 animate-pulse space-y-5">
         <div className="h-8 w-40 bg-rim rounded-full" />
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4">
           {[...Array(8)].map((_, i) => <div key={i} className="h-28 bg-rim rounded-[18px]" />)}
@@ -145,7 +145,7 @@ export default function StatsPage() {
   }
 
   return (
-    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8 space-y-6">
+    <div className="max-w-4xl mx-auto px-4 sm:px-6 py-6 sm:py-8 space-y-6">
       <div>
         <p className="text-xs font-semibold text-ink-subtle uppercase tracking-widest mb-0.5">Özet</p>
         <h1 className="text-2xl sm:text-3xl font-bold text-ink">İstatistikler</h1>

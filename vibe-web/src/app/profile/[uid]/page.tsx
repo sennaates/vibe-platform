@@ -151,7 +151,7 @@ export default function ProfilePage({ params }: { params: Promise<{ uid: string 
     return (
       <div className="animate-pulse">
         <div className="h-40 sm:h-52 bg-rim" />
-        <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 -mt-12">
+        <div className="max-w-3xl mx-auto px-4 sm:px-6 -mt-12">
           <div className="w-24 h-24 rounded-full bg-rim border-4 border-[#FAF8F4]" />
           <div className="mt-4 space-y-2">
             <div className="h-6 w-40 bg-rim rounded-full" />
@@ -200,7 +200,7 @@ export default function ProfilePage({ params }: { params: Promise<{ uid: string 
       </div>
 
       {/* Profile content */}
-      <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8">
+      <div className="max-w-3xl mx-auto px-4 sm:px-6">
         {/* Avatar overlapping banner */}
         <div className="-mt-14 sm:-mt-16 mb-4 flex items-end justify-between">
           <div

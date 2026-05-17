@@ -159,7 +159,7 @@ export default function PostDetailPage({ params }: { params: Promise<{ id: strin
 
   if (!post) {
     return (
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 animate-pulse">
+      <div className="max-w-2xl mx-auto px-4 sm:px-6 py-8 animate-pulse">
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           <div className="aspect-square bg-rim rounded-[18px]" />
           <div className="bg-rim rounded-[18px] h-96" />
@@ -172,7 +172,7 @@ export default function PostDetailPage({ params }: { params: Promise<{ id: strin
   const emotionParts = post.emotion.split(" ")
 
   return (
-    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 sm:py-6">
+    <div className="max-w-2xl mx-auto px-4 sm:px-6 py-4 sm:py-6">
       {/* Geri */}
       <Link
         href="/"
