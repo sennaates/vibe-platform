@@ -60,7 +60,7 @@ export default function AuthPage() {
       >
         <div className="text-center max-w-md px-8">
           <div className="w-24 h-24 rounded-3xl overflow-hidden shadow-lg mx-auto mb-8">
-            <Image src="/logo.png" alt="Vibe" width={96} height={96} />
+            <Image src="/logo.png" alt="Vibe" width={96} height={96} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
           </div>
           <h2 className="text-3xl xl:text-4xl font-bold text-ink mb-3">Duygularınla çiz</h2>
           <p className="text-ink-muted text-base leading-relaxed">
@@ -80,7 +80,7 @@ export default function AuthPage() {
           {/* Mobile logo */}
           <div className="flex flex-col items-center mb-8 lg:hidden">
             <div className="w-16 h-16 rounded-2xl bg-accent flex items-center justify-center mb-4 shadow-md">
-              <Image src="/logo.png" alt="Vibe" width={40} height={40} className="rounded-xl" />
+              <Image src="/logo.png" alt="Vibe" width={40} height={40} className="rounded-xl" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
             </div>
           </div>
 

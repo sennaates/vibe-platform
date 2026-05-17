@@ -37,7 +37,7 @@ export function Navbar() {
         {/* Logo */}
         <Link href="/" className="flex items-center gap-2.5 group">
           <div className="w-8 h-8 rounded-lg overflow-hidden shadow-sm group-hover:shadow transition-shadow">
-            <Image src="/logo.png" alt="Vibe" width={32} height={32} />
+            <Image src="/logo.png" alt="Vibe" width={32} height={32} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
           </div>
           <span className="font-bold text-ink text-base tracking-tight">Vibe</span>
         </Link>

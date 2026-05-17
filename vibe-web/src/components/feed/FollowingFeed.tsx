@@ -35,7 +35,7 @@ function PostSkeleton() {
 }
 
 export function FollowingFeed() {
-  const { user } = useAuth()
+  const { user, loading: authLoading } = useAuth()
   const [posts, setPosts]           = useState<NormalizedPost[]>([])
   const [liked, setLiked]           = useState<Set<string>>(new Set())
   const [loading, setLoading]       = useState(true)
@@ -85,6 +85,7 @@ export function FollowingFeed() {
   }
 
   useEffect(() => {
+    if (authLoading) return                  // auth durumu henüz bilinmiyor
     if (!user) { setLoading(false); return }
 
     async function init() {
@@ -103,7 +104,7 @@ export function FollowingFeed() {
 
     init()
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [user])
+  }, [user, authLoading])
 
   // Infinite scroll observer
   useEffect(() => {

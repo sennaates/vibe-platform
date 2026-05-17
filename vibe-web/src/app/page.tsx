@@ -42,7 +42,7 @@ export default function HomePage() {
             ) : !user ? (
               <div className="flex flex-col sm:flex-row items-center gap-6 sm:gap-8">
                 <div className="w-16 h-16 sm:w-20 sm:h-20 rounded-2xl overflow-hidden shadow-md shrink-0">
-                  <Image src="/logo.png" alt="Vibe" width={80} height={80} />
+                  <Image src="/logo.png" alt="Vibe" width={80} height={80} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
                 </div>
                 <div className="text-center sm:text-left flex-1">
                   <h1 className="text-2xl sm:text-3xl font-bold text-ink">Duygularınla çiz, paylaş</h1>

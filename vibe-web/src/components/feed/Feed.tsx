@@ -46,7 +46,7 @@ async function enrichLikes(posts: NormalizedPost[], userId: string): Promise<Set
 }
 
 export function Feed() {
-  const { user } = useAuth()
+  const { user, loading: authLoading } = useAuth()
   const [sort, setSort]             = useState<FeedSort>("recent")
   const [posts, setPosts]           = useState<NormalizedPost[]>([])
   const [liked, setLiked]           = useState<Set<string>>(new Set())
@@ -57,8 +57,15 @@ export function Feed() {
   const sentinelRef                 = useRef<HTMLDivElement>(null)
   const unsubRef                    = useRef<(() => void) | null>(null)
 
-  // Reset + ilk yükleme
+  // Reset + ilk yükleme — auth durumu belli olmadan listener başlatma
   useEffect(() => {
+    if (authLoading) return   // auth state henüz bilinmiyor, bekle
+    if (!user) {              // giriş yapılmamış → listener başlatma
+      setLoading(false)
+      setPosts([])
+      return
+    }
+
     unsubRef.current?.()
     unsubRef.current = null
     setLoading(true)
@@ -98,7 +105,7 @@ export function Feed() {
       })
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [sort])
+  }, [sort, authLoading, user])
 
   const loadMore = useCallback(async () => {
     if (loadingMore || !hasMore || !lastDocRef.current) return
@@ -162,9 +169,25 @@ export function Feed() {
       <section>
         {sortBar}
         <div className="flex flex-col items-center justify-center py-24 text-center">
-          <span className="text-6xl mb-4 block">🎨</span>
-          <p className="text-ink font-semibold text-lg">Henüz paylaşım yok</p>
-          <p className="text-ink-muted text-sm mt-1.5">İlk çizimi paylaşan sen ol</p>
+          {!user ? (
+            <>
+              <span className="text-6xl mb-4 block">🎨</span>
+              <p className="text-ink font-semibold text-lg">Keşfetmek için giriş yap</p>
+              <p className="text-ink-muted text-sm mt-1.5 mb-5">Topluluğun çizimlerini görmek için hesabına giriş yap</p>
+              <a
+                href="/auth"
+                className="px-5 py-2.5 bg-accent text-white rounded-[14px] text-sm font-semibold shadow-sm hover:bg-accent-hover transition-all"
+              >
+                Giriş Yap / Kayıt Ol
+              </a>
+            </>
+          ) : (
+            <>
+              <span className="text-6xl mb-4 block">🎨</span>
+              <p className="text-ink font-semibold text-lg">Henüz paylaşım yok</p>
+              <p className="text-ink-muted text-sm mt-1.5">İlk çizimi paylaşan sen ol</p>
+            </>
+          )}
         </div>
       </section>
     )
