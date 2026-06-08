@@ -89,11 +89,11 @@ class FeedService: ObservableObject {
         currentFollowingIds = Array(followingIds.prefix(30))
         currentFeedUserId = currentUserId
 
-        db.collection("posts")
+        feedListener = db.collection("posts")
             .whereField("userId", in: currentFollowingIds)
             .order(by: "createdAt", descending: true)
             .limit(to: pageSize)
-            .getDocuments { [weak self] snap, _ in
+            .addSnapshotListener { [weak self] snap, _ in
                 guard let self, let snap else { return }
                 self.lastFeedDoc = snap.documents.last
                 self.hasMoreFeed = snap.documents.count == self.pageSize
@@ -253,5 +253,20 @@ class FeedService: ObservableObject {
         }
 
         group.notify(queue: .main) { completion(enriched) }
+    }
+
+    func fetchPost(postId: String, currentUserId: String, completion: @escaping (Post?) -> Void) {
+        db.collection("posts").document(postId).getDocument { [weak self] snapshot, error in
+            guard let self = self,
+                  let data = snapshot?.data(),
+                  let post = Post.from(data, id: postId) else {
+                completion(nil)
+                return
+            }
+            var postsArray = [post]
+            self.enrichWithLikes(posts: &postsArray, userId: currentUserId) { enriched in
+                completion(enriched.first)
+            }
+        }
     }
 }

@@ -22,13 +22,17 @@ export default function GalleryPage() {
   const [posts, setPosts]           = useState<NormalizedPost[]>([])
   const [fetching, setFetching]     = useState(true)
   const [loadingMore, setLoadingMore] = useState(false)
+  const isLoadingMoreRef = useRef(false)
   const [hasMore, setHasMore]       = useState(true)
   const [activeEmotion, setActive]  = useState<string>("all")
   const lastDocRef                  = useRef<QueryDocumentSnapshot | null>(null)
   const sentinelRef                 = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
-    if (!user) { setFetching(false); return }
+    if (!user) {
+      setTimeout(() => setFetching(false), 0)
+      return
+    }
     const q = query(
       collection(db, "posts"),
       where("userId", "==", user.uid),
@@ -45,7 +49,8 @@ export default function GalleryPage() {
   }, [user])
 
   const loadMore = useCallback(async () => {
-    if (loadingMore || !hasMore || !lastDocRef.current || !user) return
+    if (isLoadingMoreRef.current || !hasMore || !lastDocRef.current || !user) return
+    isLoadingMoreRef.current = true
     setLoadingMore(true)
     const q = query(
       collection(db, "posts"),
@@ -60,7 +65,8 @@ export default function GalleryPage() {
     setHasMore(snap.docs.length === PAGE_SIZE)
     setPosts(prev => [...prev, ...fetched])
     setLoadingMore(false)
-  }, [loadingMore, hasMore, user])
+    isLoadingMoreRef.current = false
+  }, [hasMore, user])
 
   // Infinite scroll
   useEffect(() => {

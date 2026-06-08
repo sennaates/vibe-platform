@@ -50,7 +50,6 @@ export async function requestPushPermission(userId: string): Promise<boolean> {
       pushTokenType: "fcm-web",
     })
 
-    console.log("✅ FCM token kaydedildi")
     return true
   } catch (err) {
     console.error("Push izni alınamadı:", err)

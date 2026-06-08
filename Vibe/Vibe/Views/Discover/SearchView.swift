@@ -1,5 +1,10 @@
 import SwiftUI
 
+struct UserNavItem: Identifiable, Hashable {
+    let id = UUID()
+    let userId: String
+}
+
 struct SearchView: View {
     @EnvironmentObject var authService: AuthService
     @Environment(\.horizontalSizeClass) private var sizeClass
@@ -10,6 +15,7 @@ struct SearchView: View {
     @State private var followLoading    = Set<String>()
     @State private var trendingTags     = [(tag: String, count: Int)]()
     @State private var hashtagNavTag    : HashtagNavItem? = nil
+    @State private var userNavTag       : UserNavItem? = nil
 
     private let social = SocialService.shared
 
@@ -99,17 +105,16 @@ struct SearchView: View {
 
                 } else {
                     List(results) { user in
-                        NavigationLink(destination:
-                            PublicProfileView(userId: user.id)
-                                .environmentObject(authService)
-                        ) {
-                            UserRow(
-                                user: user,
-                                isFollowing: followingIds.contains(user.id),
-                                isLoading: followLoading.contains(user.id),
-                                isOwn: user.id == authService.firebaseUser?.uid,
-                                onFollow: { toggleFollow(user) }
-                            )
+                        UserRow(
+                            user: user,
+                            isFollowing: followingIds.contains(user.id),
+                            isLoading: followLoading.contains(user.id),
+                            isOwn: user.id == authService.firebaseUser?.uid,
+                            onFollow: { toggleFollow(user) }
+                        )
+                        .contentShape(Rectangle())
+                        .onTapGesture {
+                            userNavTag = UserNavItem(userId: user.id)
                         }
                         .listRowBackground(AppColor.canvas)
                         .listRowInsets(EdgeInsets(
@@ -128,6 +133,10 @@ struct SearchView: View {
             .navigationBarTitleDisplayMode(.inline)
             .navigationDestination(item: $hashtagNavTag) { item in
                 HashtagFeedView(tag: item.tag)
+                    .environmentObject(authService)
+            }
+            .navigationDestination(item: $userNavTag) { item in
+                PublicProfileView(userId: item.userId)
                     .environmentObject(authService)
             }
             .onAppear {

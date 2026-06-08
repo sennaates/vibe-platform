@@ -86,7 +86,10 @@ export function FollowingFeed() {
 
   useEffect(() => {
     if (authLoading) return                  // auth durumu henüz bilinmiyor
-    if (!user) { setLoading(false); return }
+    if (!user) {
+      const timer = setTimeout(() => setLoading(false), 0)
+      return () => clearTimeout(timer)
+    }
 
     async function init() {
       // Fetch followed user IDs

@@ -1,0 +1,14 @@
+{
+  "name": "vibe-root",
+  "version": "1.0.0",
+  "description": "Vibe Project Root",
+  "scripts": {
+    "dev": "npm run dev --prefix vibe-web",
+    "dev:backend": "npm run dev --prefix backend",
+    "dev:all": "npm run dev --prefix vibe-web & npm run dev --prefix backend",
+    "start": "npm start --prefix vibe-web",
+    "start:backend": "npm start --prefix backend",
+    "install:all": "npm install --prefix vibe-web && npm install --prefix backend"
+  },
+  "private": true
+}

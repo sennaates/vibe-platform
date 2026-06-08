@@ -9,8 +9,39 @@ struct PostCard: View {
     var onDelete: (() -> Void)? = nil
     var onReport: (() -> Void)? = nil
     var onHashtagTap: ((String) -> Void)? = nil
+    var onLikesTap: (() -> Void)? = nil
+
+    @State private var isLiking = false
+    @State private var showLikesSheet = false
+    @State private var isLiked: Bool
+    @State private var likeCount: Int
 
     var isOwnPost: Bool { post.userId == currentUserId }
+
+    init(
+        post: Post,
+        currentUserId: String,
+        onLike: @escaping () -> Void,
+        onComment: @escaping () -> Void,
+        onUserTap: @escaping () -> Void,
+        onDelete: (() -> Void)? = nil,
+        onReport: (() -> Void)? = nil,
+        onHashtagTap: ((String) -> Void)? = nil,
+        onLikesTap: (() -> Void)? = nil
+    ) {
+        self.post = post
+        self.currentUserId = currentUserId
+        self.onLike = onLike
+        self.onComment = onComment
+        self.onUserTap = onUserTap
+        self.onDelete = onDelete
+        self.onReport = onReport
+        self.onHashtagTap = onHashtagTap
+        self.onLikesTap = onLikesTap
+        
+        self._isLiked = State(initialValue: post.isLiked)
+        self._likeCount = State(initialValue: post.likeCount)
+    }
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
@@ -144,26 +175,64 @@ struct PostCard: View {
         .background(Color(UIColor.systemBackground))
         .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
         .shadow(color: .black.opacity(0.07), radius: 12, x: 0, y: 3)
+        .sheet(isPresented: $showLikesSheet) {
+            PostLikesView(postId: post.id)
+                .presentationDetents([.medium, .large])
+                .presentationDragIndicator(.visible)
+        }
+        .onChange(of: post.isLiked) { _, newValue in
+            isLiked = newValue
+        }
+        .onChange(of: post.likeCount) { _, newValue in
+            likeCount = newValue
+        }
     }
 
     // MARK: - Beğeni butonu
 
     private var likeButton: some View {
-        Button(action: onLike) {
-            HStack(spacing: 5) {
-                Image(systemName: post.isLiked ? "heart.fill" : "heart")
-                    .foregroundColor(post.isLiked ? .red : .secondary)
-                    .symbolEffect(.bounce, value: post.isLiked)
+        HStack(spacing: 5) {
+            Button {
+                guard !isLiking else { return }
+                isLiking = true
+                
+                // Optimistic UI updates
+                if isLiked {
+                    isLiked = false
+                    likeCount -= 1
+                } else {
+                    isLiked = true
+                    likeCount += 1
+                }
+                
+                onLike()
+                
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.8) {
+                    isLiking = false
+                }
+            } label: {
+                Image(systemName: isLiked ? "heart.fill" : "heart")
+                    .foregroundColor(isLiked ? .red : .secondary)
+                    .symbolEffect(.bounce, value: isLiked)
                     .font(.system(size: 18))
-                Text("\(post.likeCount)")
-                    .font(.subheadline.weight(.medium))
-                    .foregroundColor(post.isLiked ? .red : .secondary)
-                    .monospacedDigit()
+                    .padding(.vertical, AppSpacing.sm)
+                    .padding(.leading, AppSpacing.sm)
             }
-            .padding(.vertical, AppSpacing.sm)
-            .padding(.horizontal, AppSpacing.sm)
-            .contentShape(Rectangle())
+            .buttonStyle(.plain)
+            
+            Button {
+                onLikesTap?() ?? { showLikesSheet = true }()
+            } label: {
+                Text("\(likeCount)")
+                    .font(.subheadline.weight(.medium))
+                    .foregroundColor(isLiked ? .red : .secondary)
+                    .monospacedDigit()
+                    .padding(.vertical, AppSpacing.sm)
+                    .padding(.trailing, AppSpacing.sm)
+            }
+            .buttonStyle(.plain)
         }
+        .contentShape(Rectangle())
     }
 
     // MARK: - Yorum butonu

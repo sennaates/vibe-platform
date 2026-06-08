@@ -18,11 +18,17 @@ export function Navbar() {
   const [unread, setUnread] = useState(0)
   const { resolvedTheme, setTheme } = useTheme()
   const [mounted, setMounted] = useState(false)
-  useEffect(() => setMounted(true), [])
+  useEffect(() => {
+    const timer = setTimeout(() => setMounted(true), 0)
+    return () => clearTimeout(timer)
+  }, [])
 
   // Subscribe to unread notification count
   useEffect(() => {
-    if (!user) { setUnread(0); return }
+    if (!user) {
+      const timer = setTimeout(() => setUnread(0), 0)
+      return () => clearTimeout(timer)
+    }
     const q = query(
       collection(db, "notifications", user.uid, "items"),
       where("read", "==", false)
@@ -35,11 +41,23 @@ export function Navbar() {
     <header className="sticky top-0 z-50 bg-canvas/90 backdrop-blur-md border-b border-rim">
       <div className="w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-14 flex items-center justify-between">
         {/* Logo */}
-        <Link href="/" className="flex items-center gap-2.5 group">
-          <div className="w-8 h-8 rounded-lg overflow-hidden shadow-sm group-hover:shadow transition-shadow">
-            <Image src="/logo.png" alt="Vibe" width={32} height={32} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+        <Link href="/" className="flex items-center gap-2.5 group relative">
+          {/* Logo container with pulse & glow */}
+          <div className="relative w-8.5 h-8.5 rounded-[10px] overflow-hidden border border-rim/60 shadow-sm transition-all duration-300 group-hover:border-accent/30 group-hover:shadow-md group-hover:shadow-accent/10 shrink-0">
+            {/* Ambient rotating light behind logo (visible on hover) */}
+            <div className="absolute inset-0 bg-gradient-to-tr from-accent via-orange-500 to-pink-500 opacity-0 group-hover:opacity-15 transition-opacity duration-300" />
+            <div className="w-full h-full relative transition-transform duration-300 group-hover:scale-105 group-hover:animate-heartbeat">
+              <Image src="/logo.png" alt="Vibe" fill className="object-cover" />
+            </div>
           </div>
-          <span className="font-bold text-ink text-base tracking-tight">Vibe</span>
+          <div className="flex flex-col text-left">
+            <span className="font-black text-transparent bg-clip-text bg-gradient-to-r from-accent via-orange-500 to-pink-500 text-lg leading-none tracking-tight group-hover:brightness-105 transition-all duration-300">
+              Vibe
+            </span>
+            <span className="text-[8px] font-bold text-ink-subtle uppercase tracking-widest leading-none mt-0.5 group-hover:text-accent transition-colors">
+              Duygu & Ritim
+            </span>
+          </div>
         </Link>
 
         {/* Center nav — hidden on mobile, shown on lg+ */}

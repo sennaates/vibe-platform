@@ -33,7 +33,7 @@ export function FollowListModal({ uid, mode, onClose }: FollowListModalProps) {
       const profiles = await Promise.all(
         ids.map(async id => {
           const s = await getDoc(doc(db, "users", id))
-          return s.exists() ? (s.data() as SocialUser) : null
+          return s.exists() ? ({ uid: s.id, ...s.data() } as SocialUser) : null
         })
       )
       setUsers(profiles.filter(Boolean) as SocialUser[])

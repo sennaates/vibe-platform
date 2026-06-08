@@ -5,12 +5,26 @@ class UserStore: ObservableObject {
 
     @Published var users: [UserProfile] = []
 
-    private let fileURL: URL
+    private var currentUserId: String?
+
+    private var fileURL: URL {
+        let docs = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask)[0]
+        let name = currentUserId != nil ? "users_\(currentUserId!).json" : "users.json"
+        return docs.appendingPathComponent(name)
+    }
 
     init() {
-        let docs = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask)[0]
-        fileURL = docs.appendingPathComponent("users.json")
         load()
+    }
+
+    func switchUser(to userId: String?) {
+        guard self.currentUserId != userId else { return }
+        self.currentUserId = userId
+        if userId != nil {
+            load()
+        } else {
+            users = []
+        }
     }
 
     func add(_ user: UserProfile) {
@@ -35,6 +49,7 @@ class UserStore: ObservableObject {
     }
 
     private func persist() {
+        guard currentUserId != nil else { return }
         do {
             let data = try JSONEncoder().encode(users)
             try data.write(to: fileURL)
@@ -44,6 +59,10 @@ class UserStore: ObservableObject {
     }
 
     private func load() {
+        guard currentUserId != nil else {
+            users = []
+            return
+        }
         do {
             let data = try Data(contentsOf: fileURL)
             users = try JSONDecoder().decode([UserProfile].self, from: data)

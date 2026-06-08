@@ -34,18 +34,33 @@ export default function AuthPage() {
   async function handleSignup() {
     setError(""); setLoading(true)
     try {
-      const cred = await createUserWithEmailAndPassword(auth, email, password)
-      await setDoc(doc(db, "users", cred.user.uid), {
-        uid: cred.user.uid, email, displayName, avatarEmoji: emoji,
+      let uid = auth.currentUser?.uid
+      if (!uid) {
+        const cred = await createUserWithEmailAndPassword(auth, email, password)
+        uid = cred.user.uid
+      }
+      await setDoc(doc(db, "users", uid), {
+        uid: uid, email, displayName,
+        displayNameLowercase: displayName.toLowerCase(),
+        avatarEmoji: emoji,
         profileColor: color, bio: "", followersCount: 0, followingCount: 0,
         postsCount: 0, createdAt: serverTimestamp(),
       })
       router.push("/")
     } catch (e: unknown) {
       const msg = e instanceof Error ? e.message : ""
-      if (msg.includes("email-already-in-use")) setError("Bu e-posta zaten kullanımda.")
-      else if (msg.includes("weak-password")) setError("Şifre en az 6 karakter olmalı.")
-      else setError("Bir hata oluştu, tekrar dene.")
+      if (msg.includes("email-already-in-use")) {
+        setError("Bu e-posta zaten kullanımda.")
+        setStep(1)
+      } else if (msg.includes("weak-password")) {
+        setError("Şifre en az 6 karakter olmalı.")
+        setStep(1)
+      } else if (msg.includes("invalid-email")) {
+        setError("Geçersiz e-posta adresi.")
+        setStep(1)
+      } else {
+        setError("Bir hata oluştu, tekrar dene.")
+      }
     } finally { setLoading(false) }
   }
 

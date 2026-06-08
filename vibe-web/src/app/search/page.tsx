@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useTransition } from "react"
+import { useState, useTransition, useEffect } from "react"
 import Link from "next/link"
 import { collection, query, where, getDocs, limit, doc, getDoc, setDoc, deleteDoc, updateDoc, increment, serverTimestamp } from "firebase/firestore"
 import { Search, Loader2, UserPlus, UserCheck } from "lucide-react"
@@ -25,50 +25,74 @@ export default function SearchPage() {
   const [searched, setSearched] = useState(false)
   const [isPending, startTransition] = useTransition()
 
-  async function doSearch(value: string) {
-    const trimmed = value.trim()
-    if (!trimmed) { setResults([]); setSearched(false); return }
+  useEffect(() => {
+    const trimmed = term.trim()
+    if (!trimmed) return
 
-    // If starts with #, navigate to hashtag page
-    if (trimmed.startsWith("#") && trimmed.length > 1) {
-      router.push(`/hashtag/${trimmed.slice(1).toLowerCase()}`)
-      return
-    }
+    const delayDebounceFn = setTimeout(() => {
+      // If starts with #, navigate to hashtag page
+      if (trimmed.startsWith("#") && trimmed.length > 1) {
+        router.push(`/hashtag/${trimmed.slice(1).toLowerCase()}`)
+        return
+      }
 
-    startTransition(async () => {
-      const q = query(
-        collection(db, "users"),
-        where("displayName", ">=", value),
-        where("displayName", "<=", value + ""),
-        limit(15)
-      )
-      const snap = await getDocs(q)
-      const users = snap.docs
-        .map(d => {
+      startTransition(async () => {
+        const lowercaseVal = trimmed.toLowerCase()
+        const q = query(
+          collection(db, "users"),
+          where("displayNameLowercase", ">=", lowercaseVal),
+          where("displayNameLowercase", "<=", lowercaseVal + ""),
+          limit(15)
+        )
+        const snap = await getDocs(q)
+        let users = snap.docs.map(d => {
           const data = d.data()
-          // iOS compat: normalize counter field names
           return {
+            uid: d.id,
             ...data,
             postsCount:     data.postsCount     ?? data.postCount     ?? 0,
             followersCount: data.followersCount  ?? data.followerCount ?? 0,
             followingCount: data.followingCount  ?? 0,
           } as SocialUser
         })
-        .filter(u => u.uid !== user?.uid) // exclude self
 
-      // check follow status for each
-      let followSet = new Set<string>()
-      if (user) {
-        await Promise.all(users.map(async u => {
-          const fsnap = await getDoc(doc(db, "follows", `${user.uid}_${u.uid}`))
-          if (fsnap.exists()) followSet.add(u.uid)
-        }))
-      }
+        // Fallback if no indexed results are found (e.g. for unmigrated legacy users)
+        if (users.length === 0) {
+          const fallbackQuery = query(collection(db, "users"), limit(100))
+          const fallbackSnap = await getDocs(fallbackQuery)
+          users = fallbackSnap.docs
+            .map(d => {
+              const data = d.data()
+              return {
+                uid: d.id,
+                ...data,
+                postsCount:     data.postsCount     ?? data.postCount     ?? 0,
+                followersCount: data.followersCount  ?? data.followerCount ?? 0,
+                followingCount: data.followingCount  ?? 0,
+              } as SocialUser
+            })
+            .filter(u => u.displayName.toLowerCase().includes(lowercaseVal))
+            .slice(0, 15)
+        }
 
-      setResults(users.map(u => ({ ...u, isFollowing: followSet.has(u.uid), followLoading: false })))
-      setSearched(true)
-    })
-  }
+        users = users.filter(u => u.uid !== user?.uid) // exclude self
+
+        // check follow status for each
+        const followSet = new Set<string>()
+        if (user) {
+          await Promise.all(users.map(async u => {
+            const fsnap = await getDoc(doc(db, "follows", `${user.uid}_${u.uid}`))
+            if (fsnap.exists()) followSet.add(u.uid)
+          }))
+        }
+
+        setResults(users.map(u => ({ ...u, isFollowing: followSet.has(u.uid), followLoading: false })))
+        setSearched(true)
+      })
+    }, 400) // 400ms delay
+
+    return () => clearTimeout(delayDebounceFn)
+  }, [term, user, router])
 
   async function toggleFollow(targetUid: string) {
     if (!user || !profile) { router.push("/auth"); return }
@@ -114,7 +138,14 @@ export default function SearchPage() {
         <input
           type="text"
           value={term}
-          onChange={e => { setTerm(e.target.value); doSearch(e.target.value) }}
+          onChange={e => {
+            const val = e.target.value
+            setTerm(val)
+            if (!val.trim()) {
+              setResults([])
+              setSearched(false)
+            }
+          }}
           placeholder="İsim veya #hashtag ara…"
           className="w-full pl-11 pr-4 py-3 rounded-[16px] bg-surface border border-rim text-sm text-ink placeholder:text-ink-subtle focus:outline-none focus:ring-2 focus:ring-accent/20 focus:border-accent shadow-sm transition"
         />

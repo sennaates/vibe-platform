@@ -36,7 +36,7 @@ export function SuggestedUsers() {
       // Get recent users
       const usersSnap = await getDocs(query(collection(db, "users"), limit(20)))
       const candidates = usersSnap.docs
-        .map(d => d.data() as SocialUser)
+        .map(d => ({ uid: d.id, ...d.data() } as SocialUser))
         .filter(u => !followingIds.has(u.uid))
         .sort(() => Math.random() - 0.5)
         .slice(0, 3)

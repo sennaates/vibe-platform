@@ -22,14 +22,15 @@ struct SocialUser: Identifiable {
     /// Firestore'a yazılan canonical alanlar (web ile uyumlu)
     var dict: [String: Any] {
         [
-            "displayName":    displayName,
-            "avatarEmoji":    avatarEmoji,
-            "profileColor":   profileColorRaw,   // web: profileColor
-            "bio":            bio,
-            "followersCount": followerCount,      // web: followersCount
-            "followingCount": followingCount,
-            "postsCount":     postCount,          // web: postsCount
-            "createdAt":      createdAt
+            "displayName":          displayName,
+            "displayNameLowercase": displayName.lowercased(),
+            "avatarEmoji":          avatarEmoji,
+            "profileColor":         profileColorRaw,   // web: profileColor
+            "bio":                  bio,
+            "followersCount":       followerCount,      // web: followersCount
+            "followingCount":       followingCount,
+            "postsCount":           postCount,          // web: postsCount
+            "createdAt":            createdAt
         ]
     }
 

@@ -270,21 +270,27 @@ struct PublicProfileView: View {
 
     @ViewBuilder
     private func postCell(_ post: Post) -> some View {
-        AsyncImage(url: URL(string: post.imageURL)) { phase in
-            Group {
-                if case .success(let img) = phase {
-                    img.resizable().scaledToFill()
-                } else {
-                    Rectangle()
-                        .fill(post.emotion.color.opacity(0.15))
-                        .overlay(Text(post.emotion.emoji).font(.title))
+        Color.clear
+            .aspectRatio(1, contentMode: .fill)
+            .overlay(
+                AsyncImage(url: URL(string: post.imageURL)) { phase in
+                    switch phase {
+                    case .success(let img):
+                        img
+                            .resizable()
+                            .scaledToFill()
+                    case .failure, .empty:
+                        Rectangle()
+                            .fill(post.emotion.color.opacity(0.15))
+                            .overlay(Text(post.emotion.emoji).font(.title))
+                    @unknown default:
+                        EmptyView()
+                    }
                 }
-            }
-        }
-        .aspectRatio(1, contentMode: .fill)
-        .clipped()
-        .contentShape(Rectangle())
-        .onTapGesture { selectedPost = post }
+            )
+            .clipped()
+            .contentShape(Rectangle())
+            .onTapGesture { selectedPost = post }
     }
 
     // MARK: - Veri Yükleme
@@ -374,8 +380,8 @@ struct PublicProfileView: View {
     }
 
     private func toggleLike(post: Post) {
-        guard let uid = authService.firebaseUser?.uid else { return }
-        SocialService.shared.toggleLike(post: post, userId: uid) { _ in }
+        guard let user = authService.socialUser else { return }
+        SocialService.shared.toggleLike(post: post, user: user) { _ in }
     }
 
     private func deletePost(_ post: Post) {

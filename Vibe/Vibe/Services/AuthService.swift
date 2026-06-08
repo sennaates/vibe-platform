@@ -19,6 +19,7 @@ class AuthService: ObservableObject {
     init() {
         handle = Auth.auth().addStateDidChangeListener { [weak self] _, user in
             self?.firebaseUser = user
+            UserStore.shared.switchUser(to: user?.uid)
             if let user {
                 self?.fetchSocialUser(uid: user.uid)
             } else {
@@ -98,24 +99,36 @@ class AuthService: ObservableObject {
         }
     }
 
-    func updateProfile(displayName: String, avatarEmoji: String, bio: String, profileColor: ProfileColor? = nil) {
-        guard let uid = firebaseUser?.uid else { return }
+    func updateProfile(
+        displayName: String,
+        avatarEmoji: String,
+        bio: String,
+        profileColor: ProfileColor? = nil,
+        completion: @escaping (Error?) -> Void = { _ in }
+    ) {
+        guard let uid = firebaseUser?.uid else { completion(nil); return }
         var updates: [String: Any] = [
-            "displayName": displayName,
-            "avatarEmoji": avatarEmoji,
-            "bio": bio
+            "displayName":          displayName,
+            "displayNameLowercase": displayName.lowercased(),
+            "avatarEmoji":          avatarEmoji,
+            "bio":                  bio
         ]
         if let profileColor {
+            // Web canonical key + iOS legacy key — her iki platform okuyabilsin
+            updates["profileColor"]    = profileColor.rawValue
             updates["profileColorRaw"] = profileColor.rawValue
         }
-        db.collection("users").document(uid).updateData(updates) { [weak self] _ in
+        db.collection("users").document(uid).updateData(updates) { [weak self] error in
             DispatchQueue.main.async {
-                self?.socialUser?.displayName = displayName
-                self?.socialUser?.avatarEmoji = avatarEmoji
-                self?.socialUser?.bio = bio
-                if let profileColor {
-                    self?.socialUser?.profileColorRaw = profileColor.rawValue
+                if error == nil {
+                    self?.socialUser?.displayName = displayName
+                    self?.socialUser?.avatarEmoji = avatarEmoji
+                    self?.socialUser?.bio = bio
+                    if let profileColor {
+                        self?.socialUser?.profileColorRaw = profileColor.rawValue
+                    }
                 }
+                completion(error)
             }
         }
     }

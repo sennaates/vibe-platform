@@ -4,7 +4,7 @@ import { useEffect, useState } from "react"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
 import {
-  doc, updateDoc, deleteDoc, collection, query,
+  doc, updateDoc, collection, query,
   where, getDocs, writeBatch
 } from "firebase/firestore"
 import {
@@ -124,7 +124,7 @@ export default function SettingsPage() {
   const [notifLikes,     setNotifLikes]     = useState(true)
   const [notifComments,  setNotifComments]  = useState(true)
   const [isPrivate,      setIsPrivate]      = useState(false)
-  const [savingPrefs,    setSavingPrefs]    = useState(false)
+
   const [pushEnabled,    setPushEnabled]    = useState(false)
   const [pushLoading,    setPushLoading]    = useState(false)
 
@@ -156,18 +156,19 @@ export default function SettingsPage() {
 
   useEffect(() => {
     if (profile) {
-      setNotifFollows(profile.notifFollows  ?? true)
-      setNotifLikes(profile.notifLikes    ?? true)
-      setNotifComments(profile.notifComments ?? true)
-      setIsPrivate(profile.isPrivate ?? false)
+      const timer = setTimeout(() => {
+        setNotifFollows(profile.notifFollows  ?? true)
+        setNotifLikes(profile.notifLikes    ?? true)
+        setNotifComments(profile.notifComments ?? true)
+        setIsPrivate(profile.isPrivate ?? false)
+      }, 0)
+      return () => clearTimeout(timer)
     }
   }, [profile])
 
   async function savePreferences(updates: Record<string, boolean>) {
     if (!user) return
-    setSavingPrefs(true)
     await updateDoc(doc(db, "users", user.uid), updates)
-    setSavingPrefs(false)
     toast.success("Kaydedildi")
   }
 

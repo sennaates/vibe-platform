@@ -55,3 +55,72 @@ body {
 ::-webkit-scrollbar { width: 6px; }
 ::-webkit-scrollbar-track { background: transparent; }
 ::-webkit-scrollbar-thumb { background: var(--rim); border-radius: 99px; }
+
+/* ─── Premium Custom Animations ────────────────── */
+
+@keyframes heartbeat {
+  0%, 100% { transform: scale(1); }
+  15% { transform: scale(1.1); }
+  30% { transform: scale(0.98); }
+  45% { transform: scale(1.05); }
+}
+
+@keyframes float {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-8px); }
+}
+
+@keyframes bpm-pulse {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.18); }
+}
+
+@keyframes bpm-ripple {
+  0% { transform: scale(0.9); opacity: 0.8; }
+  100% { transform: scale(1.8); opacity: 0; }
+}
+
+@keyframes glow-pulse {
+  0%, 100% { opacity: 0.5; filter: blur(10px); }
+  50% { opacity: 0.85; filter: blur(16px); }
+}
+
+@keyframes logo-rotation {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+/* Animation Helper Classes */
+.animate-heartbeat {
+  animation: heartbeat 1.8s infinite ease-in-out;
+}
+
+.animate-float {
+  animation: float 6s infinite ease-in-out;
+}
+
+.animate-bpm-pulse {
+  animation: bpm-pulse var(--bpm-duration, 1s) infinite ease-in-out;
+}
+
+.animate-bpm-ripple {
+  animation: bpm-ripple var(--bpm-duration, 1s) infinite cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.animate-glow-pulse {
+  animation: glow-pulse 4s infinite ease-in-out;
+}
+
+.animate-spin-slow {
+  animation: logo-rotation 20s infinite linear;
+}
+
+@keyframes bpm-bounce {
+  0%, 100% { transform: scaleY(0.4); }
+  50% { transform: scaleY(1.35); }
+}
+
+.animate-bpm-bounce {
+  animation: bpm-bounce var(--bpm-duration, 1s) infinite ease-in-out;
+}
+

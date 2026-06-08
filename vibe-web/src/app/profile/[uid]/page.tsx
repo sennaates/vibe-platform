@@ -36,6 +36,7 @@ export default function ProfilePage({ params }: { params: Promise<{ uid: string 
   const [likedLoading, setLikedLoading]     = useState(false)
   const [hasMorePosts, setHasMorePosts]     = useState(true)
   const [loadingMorePosts, setLoadingMorePosts] = useState(false)
+  const isLoadingMoreRef = useRef(false)
   const lastPostDocRef = useRef<QueryDocumentSnapshot | null>(null)
   const postSentinelRef = useRef<HTMLDivElement>(null)
 
@@ -56,11 +57,21 @@ export default function ProfilePage({ params }: { params: Promise<{ uid: string 
       } as SocialUser
       setPageProfile(data)
       setLocalFollowers(data.followersCount)
-      const q = query(collection(db, "posts"), where("userId", "==", uid), orderBy("createdAt", "desc"), limit(30))
-      const postSnap = await getDocs(q)
+      let postSnap
+      try {
+        const q = query(collection(db, "posts"), where("userId", "==", uid), orderBy("createdAt", "desc"), limit(30))
+        postSnap = await getDocs(q)
+      } catch (err) {
+        console.warn("User posts query with orderBy failed, using fallback query...", err)
+        const fallbackQ = query(collection(db, "posts"), where("userId", "==", uid), limit(30))
+        postSnap = await getDocs(fallbackQ)
+      }
       lastPostDocRef.current = postSnap.docs[postSnap.docs.length - 1] ?? null
       setHasMorePosts(postSnap.docs.length === 30)
-      setPosts(postSnap.docs.map(d => (normalizePost({ id: d.id, ...d.data() } as Parameters<typeof normalizePost>[0]))))
+      
+      const rawPosts = postSnap.docs.map(d => (normalizePost({ id: d.id, ...d.data() } as Parameters<typeof normalizePost>[0])))
+      rawPosts.sort((a, b) => b.createdAt.seconds - a.createdAt.seconds)
+      setPosts(rawPosts)
       setLoading(false)
     }
     load()
@@ -72,7 +83,8 @@ export default function ProfilePage({ params }: { params: Promise<{ uid: string 
   }, [user, uid, isOwn])
 
   const loadMorePosts = useCallback(async () => {
-    if (loadingMorePosts || !hasMorePosts || !lastPostDocRef.current) return
+    if (isLoadingMoreRef.current || !hasMorePosts || !lastPostDocRef.current) return
+    isLoadingMoreRef.current = true
     setLoadingMorePosts(true)
     const q = query(
       collection(db, "posts"),
@@ -86,7 +98,8 @@ export default function ProfilePage({ params }: { params: Promise<{ uid: string 
     setHasMorePosts(snap.docs.length === 30)
     setPosts(prev => [...prev, ...snap.docs.map(d => normalizePost({ id: d.id, ...d.data() } as Parameters<typeof normalizePost>[0]))])
     setLoadingMorePosts(false)
-  }, [loadingMorePosts, hasMorePosts, uid])
+    isLoadingMoreRef.current = false
+  }, [hasMorePosts, uid])
 
   useEffect(() => {
     const el = postSentinelRef.current
@@ -102,7 +115,7 @@ export default function ProfilePage({ params }: { params: Promise<{ uid: string 
   // Load liked posts on tab switch
   useEffect(() => {
     if (profileTab !== "liked" || likedPosts.length > 0) return
-    setLikedLoading(true)
+    setTimeout(() => setLikedLoading(true), 0)
     async function loadLiked() {
       const snap = await getDocs(
         query(collection(db, "userLikes", uid, "items"), orderBy("likedAt", "desc"))
@@ -122,13 +135,13 @@ export default function ProfilePage({ params }: { params: Promise<{ uid: string 
     const followRef = doc(db, "follows", `${user.uid}_${uid}`)
     if (following) {
       await deleteDoc(followRef)
-      await updateDoc(doc(db, "users", uid), { followersCount: increment(-1) })
+      await updateDoc(doc(db, "users", uid), { followersCount: increment(-1), followerCount: increment(-1) })
       await updateDoc(doc(db, "users", user.uid), { followingCount: increment(-1) })
       setFollowing(false)
       setLocalFollowers(c => c - 1)
     } else {
       await setDoc(followRef, { followerId: user.uid, followedId: uid, createdAt: serverTimestamp() })
-      await updateDoc(doc(db, "users", uid), { followersCount: increment(1) })
+      await updateDoc(doc(db, "users", uid), { followersCount: increment(1), followerCount: increment(1) })
       await updateDoc(doc(db, "users", user.uid), { followingCount: increment(1) })
       if (myProfile) {
         await createNotification({

@@ -52,6 +52,7 @@ export function Feed() {
   const [liked, setLiked]           = useState<Set<string>>(new Set())
   const [loading, setLoading]       = useState(true)
   const [loadingMore, setLoadingMore] = useState(false)
+  const isLoadingMoreRef            = useRef(false)
   const [hasMore, setHasMore]       = useState(true)
   const lastDocRef                  = useRef<QueryDocumentSnapshot<DocumentData> | null>(null)
   const sentinelRef                 = useRef<HTMLDivElement>(null)
@@ -61,17 +62,21 @@ export function Feed() {
   useEffect(() => {
     if (authLoading) return   // auth state henüz bilinmiyor, bekle
     if (!user) {              // giriş yapılmamış → listener başlatma
-      setLoading(false)
-      setPosts([])
+      setTimeout(() => {
+        setLoading(false)
+        setPosts([])
+      }, 0)
       return
     }
 
     unsubRef.current?.()
     unsubRef.current = null
-    setLoading(true)
-    setPosts([])
-    setLiked(new Set())
-    setHasMore(true)
+    setTimeout(() => {
+      setLoading(true)
+      setPosts([])
+      setLiked(new Set())
+      setHasMore(true)
+    }, 0)
     lastDocRef.current = null
 
     if (sort === "recent") {
@@ -104,11 +109,11 @@ export function Feed() {
         setLoading(false)
       })
     }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [sort, authLoading, user])
 
   const loadMore = useCallback(async () => {
-    if (loadingMore || !hasMore || !lastDocRef.current) return
+    if (isLoadingMoreRef.current || !hasMore || !lastDocRef.current) return
+    isLoadingMoreRef.current = true
     setLoadingMore(true)
     const field = sort === "recent" ? "createdAt" : "likesCount"
     const dir   = sort === "recent" ? "desc" : "desc"
@@ -128,7 +133,8 @@ export function Feed() {
     }
     setPosts(prev => [...prev, ...fetched])
     setLoadingMore(false)
-  }, [loadingMore, hasMore, sort, user])
+    isLoadingMoreRef.current = false
+  }, [hasMore, sort, user])
 
   // Intersection observer — sentinel görününce daha fazla yükle
   useEffect(() => {

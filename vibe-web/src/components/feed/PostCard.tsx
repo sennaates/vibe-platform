@@ -3,8 +3,8 @@
 import Link from "next/link"
 import Image from "next/image"
 import { Heart, MessageCircle, MoreHorizontal, Trash2, Link2, Flag } from "lucide-react"
-import { useState } from "react"
-import { doc, updateDoc, increment, setDoc, deleteDoc, addDoc, collection, serverTimestamp } from "firebase/firestore"
+import { useState, useEffect } from "react"
+import { doc, updateDoc, increment, deleteDoc, addDoc, collection, serverTimestamp, runTransaction } from "firebase/firestore"
 import { db } from "@/lib/firebase"
 import { useAuth } from "@/hooks/useAuth"
 import { Avatar } from "@/components/ui/Avatar"
@@ -13,6 +13,7 @@ import { profileColors } from "@/lib/design"
 import { formatRelativeTime } from "@/lib/utils"
 import { createNotification } from "@/lib/notifications"
 import { toast } from "@/lib/toast"
+import { PostLikesModal } from "./PostLikesModal"
 import type { NormalizedPost } from "@/types"
 
 interface PostCardProps {
@@ -28,6 +29,20 @@ export function PostCard({ post, isLiked: initialLiked = false, onDeleted }: Pos
   const [showMenu, setShowMenu] = useState(false)
   const [deleted, setDeleted] = useState(false)
   const [reported, setReported] = useState(false)
+  const [isLiking, setIsLiking] = useState(false)
+  const [showLikesModal, setShowLikesModal] = useState(false)
+
+  // Sync initialLiked prop to liked state when it updates asynchronously
+  useEffect(() => {
+    const timer = setTimeout(() => setLiked(initialLiked), 0)
+    return () => clearTimeout(timer)
+  }, [initialLiked])
+
+  // Sync post.likesCount to likes count state when it updates
+  useEffect(() => {
+    const timer = setTimeout(() => setLikes(post.likesCount), 0)
+    return () => clearTimeout(timer)
+  }, [post.likesCount])
 
   const isOwn = user?.uid === post.userId
 
@@ -61,26 +76,46 @@ export function PostCard({ post, isLiked: initialLiked = false, onDeleted }: Pos
   if (deleted) return null
 
   async function toggleLike() {
-    if (!user) return
+    if (!user || isLiking) return
+    setIsLiking(true)
     const likeRef    = doc(db, "posts", post.id, "likes", user.uid)
     const postRef    = doc(db, "posts", post.id)
     const userLikeRef = doc(db, "userLikes", user.uid, "items", post.id)
 
-    if (liked) {
-      await deleteDoc(likeRef)
-      await deleteDoc(userLikeRef)
-      // Dual-write: web canonical + iOS legacy field
-      await updateDoc(postRef, { likesCount: increment(-1), likeCount: increment(-1) })
-      setLiked(false)
-      setLikes(l => l - 1)
-    } else {
-      await setDoc(likeRef, { userId: user.uid, createdAt: new Date() })
-      await setDoc(userLikeRef, { postId: post.id, likedAt: new Date() })
-      // Dual-write: web canonical + iOS legacy field
-      await updateDoc(postRef, { likesCount: increment(1), likeCount: increment(1) })
-      setLiked(true)
-      setLikes(l => l + 1)
-      if (profile) {
+    try {
+      const newLikedState = await runTransaction(db, async (transaction) => {
+        const likeDoc = await transaction.get(likeRef)
+        const exists = likeDoc.exists()
+
+        if (exists) {
+          transaction.delete(likeRef)
+          transaction.delete(userLikeRef)
+          transaction.update(postRef, {
+            likesCount: increment(-1),
+            likeCount: increment(-1)
+          })
+          return false
+        } else {
+          transaction.set(likeRef, {
+            userId: user.uid,
+            userName: profile?.displayName || "Kullanıcı",
+            userAvatar: profile?.avatarEmoji || "🎨",
+            userColor: profile?.profileColor || "blue",
+            createdAt: new Date()
+          })
+          transaction.set(userLikeRef, { postId: post.id, likedAt: new Date() })
+          transaction.update(postRef, {
+            likesCount: increment(1),
+            likeCount: increment(1)
+          })
+          return true
+        }
+      })
+
+      setLiked(newLikedState)
+      setLikes(l => newLikedState ? l + 1 : l - 1)
+
+      if (newLikedState && profile) {
         await createNotification({
           targetUserId:   post.userId,
           type:           "like",
@@ -92,6 +127,11 @@ export function PostCard({ post, isLiked: initialLiked = false, onDeleted }: Pos
           postImageUrl:   post.imageUrl,
         })
       }
+    } catch (error) {
+      console.error("Like transaction failed:", error)
+      toast.error("Beğeni işlemi gerçekleştirilemedi.")
+    } finally {
+      setIsLiking(false)
     }
   }
 
@@ -191,15 +231,28 @@ export function PostCard({ post, isLiked: initialLiked = false, onDeleted }: Pos
 
       {/* Actions row */}
       <div className="flex items-center gap-4 px-5 py-3">
-        <button
-          onClick={toggleLike}
-          className="flex items-center gap-1.5 text-sm font-medium transition-all active:scale-90"
-          style={{ color: liked ? "#e53e3e" : "#A8A29E" }}
-          aria-label={liked ? "Beğeniyi kaldır" : "Beğen"}
-        >
-          <Heart size={19} className={liked ? "fill-red-500" : ""} />
-          <span>{likes}</span>
-        </button>
+        <div className="flex items-center">
+          <button
+            onClick={toggleLike}
+            disabled={isLiking}
+            className={`flex items-center justify-center w-8 h-8 rounded-full transition-all duration-300 disabled:opacity-50 ${liked ? "scale-110 bg-red-50 dark:bg-red-950/20" : "hover:bg-surface-muted active:scale-90"}`}
+            aria-label={liked ? "Beğeniyi kaldır" : "Beğen"}
+          >
+            <Heart 
+              size={19} 
+              color={liked ? "#ef4444" : "#A8A29E"}
+              fill={liked ? "#ef4444" : "transparent"}
+              className={`transition-all duration-500 ${liked ? "drop-shadow-md scale-110" : ""}`} 
+            />
+          </button>
+          
+          <button
+            onClick={() => setShowLikesModal(true)}
+            className={`text-sm font-medium hover:underline transition-all -ml-1 pr-1 ${liked ? "text-red-500 font-semibold drop-shadow-sm" : "text-stone-400"}`}
+          >
+            {likes}
+          </button>
+        </div>
 
         <Link
           href={`/post/${post.id}`}
@@ -226,6 +279,13 @@ export function PostCard({ post, isLiked: initialLiked = false, onDeleted }: Pos
         <p className="px-5 pb-5 text-sm text-ink leading-relaxed -mt-1">
           <Caption text={post.caption} />
         </p>
+      )}
+
+      {showLikesModal && (
+        <PostLikesModal
+          postId={post.id}
+          onClose={() => setShowLikesModal(false)}
+        />
       )}
     </article>
   )

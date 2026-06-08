@@ -84,12 +84,34 @@ struct HashtagFeedView: View {
             .whereField("tags", arrayContains: tag)
             .order(by: "createdAt", descending: true)
             .limit(to: pageSize)
-            .getDocuments { snap, _ in
-                guard let snap else { isLoading = false; return }
-                lastDoc = snap.documents.last
-                hasMore = snap.documents.count == pageSize
+            .getDocuments { snap, error in
+                if let error {
+                    print("⚠️ Hashtag query with order failed: \(error.localizedDescription). Trying fallback query.")
+                    self.loadPostsFallback()
+                    return
+                }
+                guard let snap else { self.isLoading = false; return }
+                self.lastDoc = snap.documents.last
+                self.hasMore = snap.documents.count == self.pageSize
                 let fetched = snap.documents.compactMap { Post.from($0.data(), id: $0.documentID) }
-                enrichLikes(posts: fetched) { enriched in
+                self.enrichLikes(posts: fetched) { enriched in
+                    self.posts = enriched
+                    self.isLoading = false
+                }
+            }
+    }
+
+    private func loadPostsFallback() {
+        db.collection("posts")
+            .whereField("tags", arrayContains: tag)
+            .limit(to: pageSize * 2)
+            .getDocuments { snap, _ in
+                guard let snap else { self.isLoading = false; return }
+                self.lastDoc = snap.documents.last
+                self.hasMore = snap.documents.count == self.pageSize
+                var fetched = snap.documents.compactMap { Post.from($0.data(), id: $0.documentID) }
+                fetched.sort { $0.createdAt > $1.createdAt }
+                self.enrichLikes(posts: fetched) { enriched in
                     self.posts = enriched
                     self.isLoading = false
                 }
@@ -106,12 +128,35 @@ struct HashtagFeedView: View {
             .order(by: "createdAt", descending: true)
             .start(afterDocument: last)
             .limit(to: pageSize)
-            .getDocuments { snap, _ in
-                guard let snap else { isLoadingMore = false; return }
-                lastDoc = snap.documents.last ?? lastDoc
-                hasMore = snap.documents.count == pageSize
+            .getDocuments { snap, error in
+                if let error {
+                    print("⚠️ loadMore with order failed: \(error.localizedDescription). Trying fallback.")
+                    self.loadMoreFallback(last: last)
+                    return
+                }
+                guard let snap else { self.isLoadingMore = false; return }
+                self.lastDoc = snap.documents.last ?? self.lastDoc
+                self.hasMore = snap.documents.count == self.pageSize
                 let fetched = snap.documents.compactMap { Post.from($0.data(), id: $0.documentID) }
-                enrichLikes(posts: fetched) { enriched in
+                self.enrichLikes(posts: fetched) { enriched in
+                    self.posts.append(contentsOf: enriched)
+                    self.isLoadingMore = false
+                }
+            }
+    }
+
+    private func loadMoreFallback(last: DocumentSnapshot) {
+        db.collection("posts")
+            .whereField("tags", arrayContains: tag)
+            .start(afterDocument: last)
+            .limit(to: pageSize * 2)
+            .getDocuments { snap, _ in
+                guard let snap else { self.isLoadingMore = false; return }
+                self.lastDoc = snap.documents.last ?? self.lastDoc
+                self.hasMore = snap.documents.count == self.pageSize
+                var fetched = snap.documents.compactMap { Post.from($0.data(), id: $0.documentID) }
+                fetched.sort { $0.createdAt > $1.createdAt }
+                self.enrichLikes(posts: fetched) { enriched in
                     self.posts.append(contentsOf: enriched)
                     self.isLoadingMore = false
                 }
@@ -138,8 +183,8 @@ struct HashtagFeedView: View {
     }
 
     private func toggleLike(post: Post) {
-        guard let uid = authService.firebaseUser?.uid else { return }
+        guard let user = authService.socialUser else { return }
         HapticManager.impact(.light)
-        SocialService.shared.toggleLike(post: post, userId: uid) { _ in }
+        SocialService.shared.toggleLike(post: post, user: user) { _ in }
     }
 }

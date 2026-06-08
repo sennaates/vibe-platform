@@ -211,9 +211,9 @@ struct FeedView: View {
     }
 
     private func toggleLike(post: Post) {
-        guard let uid = authService.firebaseUser?.uid else { return }
+        guard let user = authService.socialUser else { return }
         HapticManager.impact(.light)
-        SocialService.shared.toggleLike(post: post, userId: uid) { _ in }
+        SocialService.shared.toggleLike(post: post, user: user) { _ in }
     }
 
     private func deletePost(_ post: Post) {

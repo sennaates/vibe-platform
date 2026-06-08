@@ -9,6 +9,7 @@ struct EditProfileView: View {
     @State private var selectedEmoji: String = "😊"
     @State private var selectedColor: ProfileColor = .blue
     @State private var isSaving = false
+    @State private var saveError: String? = nil
 
     private let emojiOptions = [
         "😊","😎","🎨","🖌️","✏️","🌟","🔥","🌊","🌸","🍀",
@@ -141,6 +142,14 @@ struct EditProfileView: View {
                     }
                     .padding(.horizontal, AppSpacing.lg)
 
+                    if let saveError {
+                        Text(saveError)
+                            .font(.system(size: 13))
+                            .foregroundColor(.red)
+                            .multilineTextAlignment(.center)
+                            .padding(.horizontal, AppSpacing.lg)
+                    }
+
                     Spacer(minLength: AppSpacing.lg)
                 }
             }
@@ -180,8 +189,15 @@ struct EditProfileView: View {
             avatarEmoji: selectedEmoji,
             bio: bio,
             profileColor: selectedColor
-        )
-        HapticManager.notification(.success)
-        dismiss()
+        ) { error in
+            isSaving = false
+            if error == nil {
+                HapticManager.notification(.success)
+                dismiss()
+            } else {
+                HapticManager.notification(.error)
+                saveError = "Kayıt başarısız, tekrar dene."
+            }
+        }
     }
 }

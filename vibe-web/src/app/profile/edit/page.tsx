@@ -25,10 +25,13 @@ export default function EditProfilePage() {
 
   useEffect(() => {
     if (profile) {
-      setName(profile.displayName)
-      setBio(profile.bio ?? "")
-      setEmoji(profile.avatarEmoji)
-      setColor(profile.profileColor)
+      const timer = setTimeout(() => {
+        setName(profile.displayName)
+        setBio(profile.bio ?? "")
+        setEmoji(profile.avatarEmoji)
+        setColor(profile.profileColor)
+      }, 0)
+      return () => clearTimeout(timer)
     }
   }, [profile])
 
@@ -41,6 +44,7 @@ export default function EditProfilePage() {
     setSaving(true)
     await updateDoc(doc(db, "users", user.uid), {
       displayName: displayName.trim(),
+      displayNameLowercase: displayName.trim().toLowerCase(),
       bio: bio.trim(),
       avatarEmoji: emoji,
       profileColor: color,

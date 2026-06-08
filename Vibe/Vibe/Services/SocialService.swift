@@ -7,47 +7,71 @@ class SocialService: ObservableObject {
 
     // MARK: - Beğeni
 
-    func toggleLike(post: Post, userId: String, completion: @escaping (Bool) -> Void) {
+    func toggleLike(post: Post, user: SocialUser, completion: @escaping (Bool) -> Void) {
+        let userId = user.id
         // Web ile aynı yapı: posts/{postId}/likes/{userId} subkoleksiyonu
-        let likeRef = db.collection("posts").document(post.id).collection("likes").document(userId)
-        let postRef = db.collection("posts").document(post.id)
+        let likeRef     = db.collection("posts").document(post.id).collection("likes").document(userId)
+        let postRef     = db.collection("posts").document(post.id)
+        // Web ile ortak: userLikes/{uid}/items/{postId} — beğeni geçmişi için
+        let userLikeRef = db.collection("userLikes").document(userId).collection("items").document(post.id)
 
-        likeRef.getDocument { [weak self] snapshot, _ in
-            guard let self else { return }
-            if snapshot?.exists == true {
-                // Beğeniyi kaldır
-                likeRef.delete()
-                // Her iki sayaç adını birlikte güncelle (geriye dönük uyum)
-                postRef.updateData([
+        db.runTransaction({ (transaction, errorPointer) -> Any? in
+            let likeDocument: DocumentSnapshot
+            do {
+                try likeDocument = transaction.getDocument(likeRef)
+            } catch let fetchError as NSError {
+                errorPointer?.pointee = fetchError
+                return nil
+            }
+
+            if likeDocument.exists {
+                transaction.deleteDocument(likeRef)
+                transaction.deleteDocument(userLikeRef)
+                transaction.updateData([
                     "likesCount": FieldValue.increment(Int64(-1)),
                     "likeCount":  FieldValue.increment(Int64(-1))
-                ])
-                completion(false)
+                ], forDocument: postRef)
+                return false
             } else {
-                // Beğen
-                likeRef.setData(["userId": userId, "postId": post.id, "createdAt": Date()])
-                postRef.updateData([
+                transaction.setData([
+                    "userId": userId,
+                    "userName": user.displayName,
+                    "userAvatar": user.avatarEmoji,
+                    "userColor": user.profileColorRaw,
+                    "postId": post.id,
+                    "createdAt": FieldValue.serverTimestamp()
+                ], forDocument: likeRef)
+                
+                transaction.setData([
+                    "postId": post.id,
+                    "likedAt": FieldValue.serverTimestamp()
+                ], forDocument: userLikeRef)
+                
+                transaction.updateData([
                     "likesCount": FieldValue.increment(Int64(1)),
                     "likeCount":  FieldValue.increment(Int64(1))
-                ])
-                completion(true)
-
+                ], forDocument: postRef)
+                return true
+            }
+        }) { [weak self] (result, error) in
+            if let error = error {
+                print("SocialService: Like transaction failed: \(error.localizedDescription)")
+                completion(false)
+            } else if let isLiked = result as? Bool {
+                completion(isLiked)
+                
                 // Beğeni bildirimi — kendi gönderisine beğeni gelirse bildirim yok
-                if post.userId != userId {
-                    self.db.collection("users").document(userId).getDocument { snap, _ in
-                        guard let data = snap?.data(),
-                              let user = SocialUser.from(data, id: userId) else { return }
-                        self.createNotification(
-                            targetUserId:   post.userId,
-                            type:           "like",
-                            fromUserId:     userId,
-                            fromUserName:   user.displayName,
-                            fromUserAvatar: user.avatarEmoji,
-                            fromUserColor:  user.profileColorRaw,
-                            postId:         post.id,
-                            postImageUrl:   post.imageURL
-                        )
-                    }
+                if isLiked && post.userId != userId {
+                    self?.createNotification(
+                        targetUserId:   post.userId,
+                        type:           "like",
+                        fromUserId:     userId,
+                        fromUserName:   user.displayName,
+                        fromUserAvatar: user.avatarEmoji,
+                        fromUserColor:  user.profileColorRaw,
+                        postId:         post.id,
+                        postImageUrl:   post.imageURL
+                    )
                 }
             }
         }
@@ -255,10 +279,23 @@ class SocialService: ObservableObject {
             query = query.start(afterDocument: lastDoc)
         }
 
-        query.getDocuments { snapshot, _ in
-            let docs  = snapshot?.documents ?? []
-            let posts = docs.compactMap { Post.from($0.data(), id: $0.documentID) }
-            completion(posts, docs.last)
+        query.getDocuments { [weak self] snapshot, error in
+            if let error = error {
+                print("SocialService: query failed with orderBy, running fallback. Error: \(error.localizedDescription)")
+                self?.db.collection("posts")
+                    .whereField("userId", isEqualTo: userId)
+                    .limit(to: 100)
+                    .getDocuments { fallbackSnapshot, _ in
+                        let docs  = fallbackSnapshot?.documents ?? []
+                        var posts = docs.compactMap { Post.from($0.data(), id: $0.documentID) }
+                        posts.sort { $0.createdAt > $1.createdAt }
+                        completion(posts, nil)
+                    }
+            } else {
+                let docs  = snapshot?.documents ?? []
+                let posts = docs.compactMap { Post.from($0.data(), id: $0.documentID) }
+                completion(posts, docs.last)
+            }
         }
     }
 
@@ -306,16 +343,36 @@ class SocialService: ObservableObject {
 
     func searchUsers(query: String, completion: @escaping ([SocialUser]) -> Void) {
         guard !query.isEmpty else { completion([]); return }
-        let end = query + "\u{f8ff}"
+        let lowercaseQuery = query.lowercased()
+        let end = lowercaseQuery + "\u{f8ff}"
+        
         db.collection("users")
-            .whereField("displayName", isGreaterThanOrEqualTo: query)
-            .whereField("displayName", isLessThanOrEqualTo: end)
+            .whereField("displayNameLowercase", isGreaterThanOrEqualTo: lowercaseQuery)
+            .whereField("displayNameLowercase", isLessThanOrEqualTo: end)
             .limit(to: 20)
-            .getDocuments { snapshot, _ in
+            .getDocuments { [weak self] snapshot, _ in
+                guard let self else { return }
+                
                 let users = snapshot?.documents.compactMap {
                     SocialUser.from($0.data(), id: $0.documentID)
                 } ?? []
-                completion(users)
+                
+                if !users.isEmpty {
+                    completion(users)
+                } else {
+                    // Fallback: fetch all users (limit to 100) and scan in-memory for case-insensitive matching
+                    self.db.collection("users")
+                        .limit(to: 100)
+                        .getDocuments { fallbackSnapshot, _ in
+                            let allUsers = fallbackSnapshot?.documents.compactMap {
+                                SocialUser.from($0.data(), id: $0.documentID)
+                            } ?? []
+                            let filtered = allUsers.filter {
+                                $0.displayName.localizedCaseInsensitiveContains(lowercaseQuery)
+                            }
+                            completion(Array(filtered.prefix(20)))
+                        }
+                }
             }
     }
 

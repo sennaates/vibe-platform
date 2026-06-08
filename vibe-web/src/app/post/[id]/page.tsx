@@ -7,7 +7,7 @@ import { useRouter } from "next/navigation"
 import {
   doc, getDoc, collection, query, orderBy,
   onSnapshot, addDoc, serverTimestamp, updateDoc, increment, deleteDoc,
-  setDoc
+  runTransaction
 } from "firebase/firestore"
 import { ArrowLeft, Send, Heart, Trash2, MoreHorizontal, MessageCircle, Link2, Pencil, X, Check } from "lucide-react"
 import { db } from "@/lib/firebase"
@@ -19,6 +19,7 @@ import { createNotification } from "@/lib/notifications"
 import { toast } from "@/lib/toast"
 import { Caption } from "@/components/ui/Caption"
 import { normalizePost, type NormalizedPost, type Comment } from "@/types"
+import { PostLikesModal } from "@/components/feed/PostLikesModal"
 
 export default function PostDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params)
@@ -37,6 +38,8 @@ export default function PostDetailPage({ params }: { params: Promise<{ id: strin
   const [captionDraft, setCaptionDraft] = useState("")
   const [savingCaption, setSavingCaption] = useState(false)
   const [replyTo, setReplyTo]       = useState<{ id: string; name: string } | null>(null)
+  const [isLiking, setIsLiking]     = useState(false)
+  const [showLikesModal, setShowLikesModal] = useState(false)
   const bottomRef                 = useRef<HTMLDivElement>(null)
   const inputRef                  = useRef<HTMLInputElement>(null)
 
@@ -66,23 +69,46 @@ export default function PostDetailPage({ params }: { params: Promise<{ id: strin
   const isOwnPost = user?.uid === post?.userId
 
   async function toggleLike() {
-    if (!user || !post) return
+    if (!user || !post || isLiking) return
+    setIsLiking(true)
     const likeRef     = doc(db, "posts", id, "likes", user.uid)
     const postRef     = doc(db, "posts", id)
     const userLikeRef = doc(db, "userLikes", user.uid, "items", id)
-    if (liked) {
-      await deleteDoc(likeRef)
-      await deleteDoc(userLikeRef)
-      await updateDoc(postRef, { likesCount: increment(-1), likeCount: increment(-1) })
-      setLiked(false)
-      setLikes(l => l - 1)
-    } else {
-      await setDoc(likeRef, { userId: user.uid, createdAt: new Date() })
-      await setDoc(userLikeRef, { postId: id, likedAt: new Date() })
-      await updateDoc(postRef, { likesCount: increment(1), likeCount: increment(1) })
-      setLiked(true)
-      setLikes(l => l + 1)
-      if (profile) {
+
+    try {
+      const newLikedState = await runTransaction(db, async (transaction) => {
+        const likeDoc = await transaction.get(likeRef)
+        const exists = likeDoc.exists()
+
+        if (exists) {
+          transaction.delete(likeRef)
+          transaction.delete(userLikeRef)
+          transaction.update(postRef, {
+            likesCount: increment(-1),
+            likeCount: increment(-1)
+          })
+          return false
+        } else {
+          transaction.set(likeRef, {
+            userId: user.uid,
+            userName: profile?.displayName || "Kullanıcı",
+            userAvatar: profile?.avatarEmoji || "🎨",
+            userColor: profile?.profileColor || "blue",
+            createdAt: new Date()
+          })
+          transaction.set(userLikeRef, { postId: id, likedAt: new Date() })
+          transaction.update(postRef, {
+            likesCount: increment(1),
+            likeCount: increment(1)
+          })
+          return true
+        }
+      })
+
+      setLiked(newLikedState)
+      setLikes(l => newLikedState ? l + 1 : l - 1)
+
+      if (newLikedState && profile) {
         await createNotification({
           targetUserId:   post.userId,
           type:           "like",
@@ -94,6 +120,10 @@ export default function PostDetailPage({ params }: { params: Promise<{ id: strin
           postImageUrl:   post.imageUrl,
         })
       }
+    } catch (error) {
+      console.error("Like transaction failed on details page:", error)
+    } finally {
+      setIsLiking(false)
     }
   }
 
@@ -257,14 +287,28 @@ export default function PostDetailPage({ params }: { params: Promise<{ id: strin
 
             {/* Actions row */}
             <div className="flex items-center gap-4 px-5 pt-3 pb-1">
-              <button
-                onClick={toggleLike}
-                className="flex items-center gap-1.5 text-sm font-medium transition-all active:scale-90"
-                style={{ color: liked ? "#e53e3e" : "#A8A29E" }}
-              >
-                <Heart size={20} className={liked ? "fill-red-500" : ""} />
-                <span>{likes}</span>
-              </button>
+              <div className="flex items-center">
+                <button
+                  onClick={toggleLike}
+                  disabled={isLiking}
+                  className={`flex items-center justify-center w-8 h-8 rounded-full transition-all duration-300 disabled:opacity-50 ${liked ? "scale-110 bg-red-50 dark:bg-red-950/20" : "hover:bg-surface-muted active:scale-90"}`}
+                  aria-label={liked ? "Beğeniyi kaldır" : "Beğen"}
+                >
+                  <Heart 
+                    size={19} 
+                    color={liked ? "#ef4444" : "#A8A29E"}
+                    fill={liked ? "#ef4444" : "transparent"}
+                    className={`transition-all duration-500 ${liked ? "drop-shadow-md scale-110" : ""}`} 
+                  />
+                </button>
+                
+                <button
+                  onClick={() => setShowLikesModal(true)}
+                  className={`text-sm font-medium hover:underline transition-all -ml-1 pr-1 ${liked ? "text-red-500 font-semibold drop-shadow-sm" : "text-stone-400"}`}
+                >
+                  {likes}
+                </button>
+              </div>
               <div className="flex items-center gap-1.5 text-sm font-medium text-ink-subtle">
                 <MessageCircle size={20} />
                 <span>{comments.length}</span>
@@ -416,6 +460,12 @@ export default function PostDetailPage({ params }: { params: Promise<{ id: strin
           </div>
         </div>
       </div>
+      {showLikesModal && (
+        <PostLikesModal
+          postId={id}
+          onClose={() => setShowLikesModal(false)}
+        />
+      )}
     </div>
   )
 }

@@ -7,6 +7,10 @@ struct NotificationsView: View {
     @State private var listener: (any ListenerRegistration)?
     @State private var loading = true
 
+    @State private var userNavTag: UserNavItem? = nil
+    @State private var selectedPost: Post? = nil
+    @State private var isLoadingPost = false
+
     private let social = SocialService.shared
 
     var body: some View {
@@ -22,22 +26,54 @@ struct NotificationsView: View {
                         message: "Biri seni takip ettiğinde veya çizimini beğendiğinde burada görünecek"
                     )
                 } else {
-                    List {
-                        ForEach(notifications) { notif in
-                            NotifRow(notif: notif)
+                    ZStack {
+                        List {
+                            ForEach(notifications) { notif in
+                                NotifRow(
+                                    notif: notif,
+                                    onUserTap: {
+                                        userNavTag = UserNavItem(userId: notif.fromUserId)
+                                    },
+                                    onPostTap: {
+                                        if let postId = notif.postId {
+                                            navigateToPost(postId: postId)
+                                        }
+                                    }
+                                )
                                 .listRowBackground(
                                     notif.read ? AppColor.canvas : AppColor.accent.opacity(0.06)
                                 )
                                 .listRowInsets(EdgeInsets(top: 6, leading: 20, bottom: 6, trailing: 20))
+                            }
+                        }
+                        .listStyle(.plain)
+                        .background(AppColor.canvas)
+
+                        if isLoadingPost {
+                            Color.black.opacity(0.15)
+                                .ignoresSafeArea()
+                            ProgressView()
+                                .tint(AppColor.accent)
+                                .padding(20)
+                                .background(RoundedRectangle(cornerRadius: 10).fill(Color(.systemBackground)))
                         }
                     }
-                    .listStyle(.plain)
-                    .background(AppColor.canvas)
                 }
             }
             .background(AppColor.canvas)
             .navigationTitle("Bildirimler")
             .navigationBarTitleDisplayMode(.inline)
+            .navigationDestination(item: $userNavTag) { item in
+                PublicProfileView(userId: item.userId)
+                    .environmentObject(authService)
+            }
+            .navigationDestination(item: $selectedPost) { post in
+                PostDetailView(post: post, onLike: {
+                    guard let user = authService.socialUser else { return }
+                    SocialService.shared.toggleLike(post: post, user: user) { _ in }
+                })
+                .environmentObject(authService)
+            }
             .toolbar {
                 ToolbarItem(placement: .topBarTrailing) {
                     if !notifications.isEmpty {
@@ -75,12 +111,25 @@ struct NotificationsView: View {
         // Yerel güncelleme
         for i in notifications.indices { notifications[i].read = true }
     }
+
+    private func navigateToPost(postId: String) {
+        guard let currentUid = authService.firebaseUser?.uid else { return }
+        isLoadingPost = true
+        FeedService.shared.fetchPost(postId: postId, currentUserId: currentUid) { post in
+            isLoadingPost = false
+            if let post {
+                selectedPost = post
+            }
+        }
+    }
 }
 
 // MARK: - NotifRow
 
 private struct NotifRow: View {
     let notif: AppNotification
+    let onUserTap: () -> Void
+    let onPostTap: () -> Void
 
     private var icon: (name: String, color: Color) {
         switch notif.type {
@@ -120,6 +169,10 @@ private struct NotifRow: View {
                 }
                 .offset(x: 4, y: 4)
             }
+            .contentShape(Circle())
+            .onTapGesture {
+                onUserTap()
+            }
 
             // Metin
             VStack(alignment: .leading, spacing: 3) {
@@ -130,6 +183,14 @@ private struct NotifRow: View {
                     + Text(" \(body2)")
                         .font(.system(size: 14))
                         .foregroundColor(AppColor.inkMuted)
+                }
+                .contentShape(Rectangle())
+                .onTapGesture {
+                    if notif.type == "follow" {
+                        onUserTap()
+                    } else {
+                        onPostTap()
+                    }
                 }
 
                 Text(relativeTime(notif.createdAt))
@@ -151,6 +212,10 @@ private struct NotifRow: View {
                 }
                 .frame(width: 50, height: 50)
                 .clipShape(RoundedRectangle(cornerRadius: AppRadius.sm, style: .continuous))
+                .contentShape(Rectangle())
+                .onTapGesture {
+                    onPostTap()
+                }
             }
         }
         .padding(.vertical, 4)

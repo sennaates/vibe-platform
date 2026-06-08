@@ -48,7 +48,10 @@ export default function StatsPage() {
   const [fetching, setFetching] = useState(true)
 
   useEffect(() => {
-    if (!user) { setFetching(false); return }
+    if (!user) {
+      const timer = setTimeout(() => setFetching(false), 0)
+      return () => clearTimeout(timer)
+    }
     const q = query(collection(db, "posts"), where("userId", "==", user.uid), orderBy("createdAt", "desc"))
     getDocs(q).then(snap => {
       setPosts(snap.docs.map(d => (normalizePost({ id: d.id, ...d.data() } as Parameters<typeof normalizePost>[0]))))
