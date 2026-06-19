@@ -1,6 +1,12 @@
 import SwiftUI
 import FirebaseFirestore
 
+struct FollowsListNavTag: Identifiable, Hashable {
+    let id = UUID()
+    let userId: String
+    let mode: FollowsListMode
+}
+
 struct PublicProfileView: View {
     @EnvironmentObject var authService: AuthService
     let userId: String
@@ -11,6 +17,7 @@ struct PublicProfileView: View {
     @State private var selectedPost: Post? = nil
     @State private var followLoading = false
     @State private var hashtagNavTag: HashtagNavItem? = nil
+    @State private var followsListNavTag: FollowsListNavTag? = nil
 
     // Sekmeler (kendi profili için ikinci sekme görünür)
     @State private var selectedTab = 0   // 0 = gönderiler, 1 = beğendikleri
@@ -64,6 +71,10 @@ struct PublicProfileView: View {
                         .environmentObject(authService)
                 }
             }
+        }
+        .navigationDestination(item: $followsListNavTag) { tag in
+            FollowsListView(userId: tag.userId, mode: tag.mode)
+                .environmentObject(authService)
         }
         .onAppear { load() }
     }
@@ -131,9 +142,24 @@ struct PublicProfileView: View {
                 HStack(spacing: 0) {
                     statPill(value: user.postCount, label: "Gönderi")
                     Divider().frame(height: 30)
-                    statPill(value: user.followerCount, label: "Takipçi")
+                    
+                    Button {
+                        HapticManager.impact(.light)
+                        followsListNavTag = FollowsListNavTag(userId: userId, mode: .followers)
+                    } label: {
+                        statPill(value: user.followerCount, label: "Takipçi")
+                    }
+                    .buttonStyle(.plain)
+                    
                     Divider().frame(height: 30)
-                    statPill(value: user.followingCount, label: "Takip")
+                    
+                    Button {
+                        HapticManager.impact(.light)
+                        followsListNavTag = FollowsListNavTag(userId: userId, mode: .following)
+                    } label: {
+                        statPill(value: user.followingCount, label: "Takip")
+                    }
+                    .buttonStyle(.plain)
                 }
                 .background(Color(UIColor.secondarySystemBackground))
                 .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))

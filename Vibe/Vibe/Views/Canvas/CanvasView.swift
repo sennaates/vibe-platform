@@ -21,7 +21,15 @@ struct CanvasView: View {
     @State private var savedFeedback = false
 
     @State private var bgType: CanvasBgType
-    @State private var customBgColor: Color = Color(UIColor.systemBackground)
+    @State private var customBgColor: Color = Color(hex: "#FAF8F4")
+
+    private var gridLineColor: Color {
+        let uiColor = UIColor(customBgColor)
+        var r: CGFloat = 0, g: CGFloat = 0, b: CGFloat = 0, a: CGFloat = 0
+        uiColor.getRed(&r, green: &g, blue: &b, alpha: &a)
+        let brightness = (r * 299 + g * 587 + b * 114) / 1000
+        return brightness < 0.5 ? Color.white.opacity(0.08) : AppColor.inkMuted.opacity(0.15)
+    }
 
     private let drawingStore: DrawingStore
 
@@ -39,11 +47,11 @@ struct CanvasView: View {
             
             if bgType == .grid {
                 GridPattern()
-                    .stroke(AppColor.inkMuted.opacity(0.15), lineWidth: 0.5)
+                    .stroke(gridLineColor, lineWidth: 0.5)
                     .ignoresSafeArea()
             } else if bgType == .lined {
                 LinedPattern()
-                    .stroke(AppColor.inkMuted.opacity(0.15), lineWidth: 0.5)
+                    .stroke(gridLineColor, lineWidth: 0.5)
                     .ignoresSafeArea()
             }
             
@@ -171,7 +179,15 @@ struct CanvasView: View {
                             Text(type.rawValue).tag(type)
                         }
                     }
-                    ColorPicker("Sayfa Rengi", selection: $customBgColor)
+                    Picker("Sayfa Rengi", selection: $customBgColor) {
+                        Text("Krem").tag(Color(hex: "#FAF8F4"))
+                        Text("Beyaz").tag(Color.white)
+                        Text("Kömür").tag(Color(hex: "#1E1E1E"))
+                        Text("Adaçayı").tag(Color(hex: "#E8EFE9"))
+                        Text("Lavanta").tag(Color(hex: "#EFE8EF"))
+                        Text("Mavi").tag(Color(hex: "#E6EEF4"))
+                    }
+                    ColorPicker("Özel Renk...", selection: $customBgColor)
                 } label: {
                     Label("Tuval Arka Planı", systemImage: "square.grid.2x2")
                 }
@@ -257,7 +273,15 @@ struct CanvasView: View {
                         Text(type.rawValue).tag(type)
                     }
                 }
-                ColorPicker("Sayfa Rengi", selection: $customBgColor)
+                Picker("Sayfa Rengi", selection: $customBgColor) {
+                    Text("Krem").tag(Color(hex: "#FAF8F4"))
+                    Text("Beyaz").tag(Color.white)
+                    Text("Kömür").tag(Color(hex: "#1E1E1E"))
+                    Text("Adaçayı").tag(Color(hex: "#E8EFE9"))
+                    Text("Lavanta").tag(Color(hex: "#EFE8EF"))
+                    Text("Mavi").tag(Color(hex: "#E6EEF4"))
+                }
+                ColorPicker("Özel Renk...", selection: $customBgColor)
             } label: {
                 Image(systemName: "square.grid.2x2")
                     .font(.system(size: 14, weight: .semibold))
@@ -394,21 +418,27 @@ struct CanvasView: View {
     }
 
     private var emotionBadge: some View {
-        HStack(spacing: 6) {
-            Text(biometricService.currentEmotion.emoji)
-                .font(.system(size: 16))
-                .scaleEffect(emotionPulse ? 1.3 : 1.0)
-                .animation(.spring(response: 0.3, dampingFraction: 0.4), value: emotionPulse)
-            Text(biometricService.currentEmotion.displayName)
-                .font(.system(size: 13, weight: .semibold))
-                .foregroundColor(biometricService.currentEmotion.color)
-                .animation(.easeInOut(duration: 0.3), value: biometricService.currentEmotion)
+        Button {
+            HapticManager.impact(.light)
+            isShowingMoodInput = true
+        } label: {
+            HStack(spacing: 6) {
+                Text(biometricService.currentEmotion.emoji)
+                    .font(.system(size: 16))
+                    .scaleEffect(emotionPulse ? 1.3 : 1.0)
+                    .animation(.spring(response: 0.3, dampingFraction: 0.4), value: emotionPulse)
+                Text(biometricService.currentEmotion.displayName)
+                    .font(.system(size: 13, weight: .semibold))
+                    .foregroundColor(biometricService.currentEmotion.color)
+                    .animation(.easeInOut(duration: 0.3), value: biometricService.currentEmotion)
+            }
+            .padding(.horizontal, 12)
+            .padding(.vertical, 8)
+            .background(biometricService.currentEmotion.color.opacity(0.10))
+            .clipShape(Capsule())
+            .overlay(Capsule().strokeBorder(biometricService.currentEmotion.color.opacity(0.25), lineWidth: 0.8))
         }
-        .padding(.horizontal, 12)
-        .padding(.vertical, 8)
-        .background(biometricService.currentEmotion.color.opacity(0.10))
-        .clipShape(Capsule())
-        .overlay(Capsule().strokeBorder(biometricService.currentEmotion.color.opacity(0.25), lineWidth: 0.8))
+        .buttonStyle(.plain)
     }
 
     private func iconButton(_ icon: String, enabled: Bool = true, action: @escaping () -> Void) -> some View {

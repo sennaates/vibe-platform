@@ -28,3 +28,8 @@ node_modules/
 
 # Firebase/Google Services
 **/GoogleService-Info.plist
+
+# Claude / Agent workspaces
+.claude/
+**/worktrees/
+temp-chrome-checker/

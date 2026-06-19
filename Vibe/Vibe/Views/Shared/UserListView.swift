@@ -91,22 +91,21 @@ struct UserListView: View {
                 spacing: 12
             ) {
                 ForEach(userStore.users) { user in
-                    ExistingCanvasCard(user: user)
-                        .onTapGesture {
-                            HapticManager.impact(.medium)
-                            selectedUser = user
+                    ExistingCanvasCard(user: user) {
+                        HapticManager.impact(.medium)
+                        selectedUser = user
+                    }
+                    .contextMenu {
+                        Button { editingUser = user } label: {
+                            Label("Yeniden Adlandır", systemImage: "pencil")
                         }
-                        .contextMenu {
-                            Button { editingUser = user } label: {
-                                Label("Yeniden Adlandır", systemImage: "pencil")
-                            }
-                            Divider()
-                            Button(role: .destructive) {
-                                userStore.delete(user)
-                            } label: {
-                                Label("Kanvası Sil", systemImage: "trash")
-                            }
+                        Divider()
+                        Button(role: .destructive) {
+                            userStore.delete(user)
+                        } label: {
+                            Label("Kanvası Sil", systemImage: "trash")
                         }
+                    }
                 }
             }
         }
@@ -166,56 +165,52 @@ struct UserListView: View {
 
 private struct ExistingCanvasCard: View {
     let user: UserProfile
-    @State private var pressed = false
+    let onTap: () -> Void
 
     var body: some View {
-        VStack(spacing: 0) {
-            // Üst gradient alanı
-            ZStack {
-                LinearGradient(
-                    colors: [
-                        user.profileColor.color.opacity(0.85),
-                        user.profileColor.color.opacity(0.45)
-                    ],
-                    startPoint: .topLeading,
-                    endPoint: .bottomTrailing
-                )
-                .frame(height: 70)
+        Button(action: onTap) {
+            VStack(spacing: 0) {
+                // Üst gradient alanı
+                ZStack {
+                    LinearGradient(
+                        colors: [
+                            user.profileColor.color.opacity(0.85),
+                            user.profileColor.color.opacity(0.45)
+                        ],
+                        startPoint: .topLeading,
+                        endPoint: .bottomTrailing
+                    )
+                    .frame(height: 70)
 
-                Text(user.avatarEmoji)
-                    .font(.system(size: 32))
-                    .shadow(color: .black.opacity(0.15), radius: 4, y: 2)
+                    Text(user.avatarEmoji)
+                        .font(.system(size: 32))
+                        .shadow(color: .black.opacity(0.15), radius: 4, y: 2)
+                }
+
+                // Alt bilgi
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(user.name)
+                        .font(.system(size: 14, weight: .semibold))
+                        .lineLimit(1)
+                        .foregroundColor(AppColor.ink)
+
+                    Text(user.createdAt, style: .date)
+                        .font(.system(size: 10))
+                        .foregroundColor(AppColor.inkMuted)
+                }
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .padding(.horizontal, 12)
+                .padding(.vertical, 10)
+                .background(AppColor.surface)
             }
-
-            // Alt bilgi
-            VStack(alignment: .leading, spacing: 2) {
-                Text(user.name)
-                    .font(.system(size: 14, weight: .semibold))
-                    .lineLimit(1)
-                    .foregroundColor(AppColor.ink)
-
-                Text(user.createdAt, style: .date)
-                    .font(.system(size: 10))
-                    .foregroundColor(AppColor.inkMuted)
-            }
-            .frame(maxWidth: .infinity, alignment: .leading)
-            .padding(.horizontal, 12)
-            .padding(.vertical, 10)
-            .background(AppColor.surface)
+            .clipShape(RoundedRectangle(cornerRadius: AppRadius.lg, style: .continuous))
+            .overlay(
+                RoundedRectangle(cornerRadius: AppRadius.lg, style: .continuous)
+                    .strokeBorder(AppColor.divider, lineWidth: 0.5)
+            )
+            .shadow(color: user.profileColor.color.opacity(0.15), radius: 8, y: 3)
         }
-        .clipShape(RoundedRectangle(cornerRadius: AppRadius.lg, style: .continuous))
-        .overlay(
-            RoundedRectangle(cornerRadius: AppRadius.lg, style: .continuous)
-                .strokeBorder(AppColor.divider, lineWidth: 0.5)
-        )
-        .shadow(color: user.profileColor.color.opacity(0.15), radius: 8, y: 3)
-        .scaleEffect(pressed ? 0.96 : 1.0)
-        .animation(.spring(response: 0.3, dampingFraction: 0.7), value: pressed)
-        .simultaneousGesture(
-            DragGesture(minimumDistance: 0)
-                .onChanged { _ in pressed = true }
-                .onEnded   { _ in pressed = false }
-        )
+        .buttonStyle(CardScaleButtonStyle())
     }
 }
 
@@ -224,7 +219,6 @@ private struct ExistingCanvasCard: View {
 private struct PresetCanvasCard: View {
     let preset: CanvasPreset
     let onTap: () -> Void
-    @State private var pressed = false
 
     var body: some View {
         Button(action: onTap) {
@@ -256,14 +250,17 @@ private struct PresetCanvasCard: View {
                 RoundedRectangle(cornerRadius: AppRadius.lg, style: .continuous)
                     .strokeBorder(preset.color.color.opacity(0.20), lineWidth: 1)
             )
-            .scaleEffect(pressed ? 0.94 : 1.0)
-            .animation(.spring(response: 0.25, dampingFraction: 0.7), value: pressed)
         }
-        .buttonStyle(.plain)
-        .simultaneousGesture(
-            DragGesture(minimumDistance: 0)
-                .onChanged { _ in pressed = true }
-                .onEnded   { _ in pressed = false }
-        )
+        .buttonStyle(CardScaleButtonStyle())
+    }
+}
+
+// MARK: - Custom Button Style
+
+struct CardScaleButtonStyle: ButtonStyle {
+    func makeBody(configuration: Configuration) -> some View {
+        configuration.label
+            .scaleEffect(configuration.isPressed ? 0.95 : 1.0)
+            .animation(.spring(response: 0.25, dampingFraction: 0.7), value: configuration.isPressed)
     }
 }

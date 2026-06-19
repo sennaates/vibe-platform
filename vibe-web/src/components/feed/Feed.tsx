@@ -92,24 +92,60 @@ const MOCK_PRESET_POSTS: NormalizedPost[] = [
   }
 ]
 
-function mergeLocalPosts(fetched: NormalizedPost[]): NormalizedPost[] {
+function getPostTime(post: NormalizedPost): number {
+  if (!post.createdAt) return Date.now() // pending server timestamp or local post
+  if (typeof post.createdAt.toMillis === "function") {
+    return post.createdAt.toMillis()
+  }
+  if (typeof post.createdAt.seconds === "number") {
+    return post.createdAt.seconds * 1000 + (post.createdAt.nanoseconds || 0) / 1000000
+  }
+  const date = new Date(post.createdAt as any)
+  return isNaN(date.getTime()) ? Date.now() : date.getTime()
+}
+
+function mergeLocalPosts(fetched: NormalizedPost[], sortByRecent: boolean = true): NormalizedPost[] {
   if (typeof window === "undefined") return fetched
   try {
     const local = JSON.parse(localStorage.getItem("vibe_local_posts") ?? "[]") as NormalizedPost[]
-    let all = [...local, ...fetched]
     
+    // De-duplicate by both ID and Image URL, prioritizing fetched posts
+    const seenIds = new Set<string>()
+    const seenImages = new Set<string>()
+    const unique: NormalizedPost[] = []
+
+    // Process fetched posts first (they are canonical)
+    for (const p of fetched) {
+      if (p.id && !seenIds.has(p.id)) {
+        seenIds.add(p.id)
+        if (p.imageUrl) seenImages.add(p.imageUrl)
+        unique.push(p)
+      }
+    }
+
+    // Process local posts next (avoid duplicates)
+    for (const p of local) {
+      if (p.id && seenIds.has(p.id)) continue
+      if (p.imageUrl && seenImages.has(p.imageUrl)) continue
+      seenIds.add(p.id)
+      if (p.imageUrl) seenImages.add(p.imageUrl)
+      unique.push(p)
+    }
+
+    let all = unique
+
     // Fallback to presets if feed is empty (ensures the feed always looks complete during demos)
     if (all.length === 0) {
       all = [...MOCK_PRESET_POSTS]
     }
 
-    const seen = new Set<string>()
-    return all.filter(p => {
-      const key = p.id
-      if (seen.has(key)) return false
-      seen.add(key)
-      return true
-    })
+    if (sortByRecent) {
+      all.sort((a, b) => getPostTime(b) - getPostTime(a))
+    } else {
+      all.sort((a, b) => (b.likesCount ?? 0) - (a.likesCount ?? 0))
+    }
+
+    return all
   } catch (e) {
     console.error("Failed to merge local posts:", e)
     return fetched
@@ -135,7 +171,7 @@ export function Feed() {
     if (!user) {              // giriş yapılmamış → listener başlatma
       setTimeout(() => {
         setLoading(false)
-        setPosts(mergeLocalPosts([]))
+        setPosts(mergeLocalPosts([], sort === "recent"))
       }, 0)
       return
     }
@@ -160,7 +196,7 @@ export function Feed() {
             const fetched = snap.docs.map(d => (normalizePost({ id: d.id, ...d.data() } as Parameters<typeof normalizePost>[0])))
             lastDocRef.current = snap.docs[snap.docs.length - 1] ?? null
             setHasMore(snap.docs.length === PAGE_SIZE)
-            setPosts(mergeLocalPosts(fetched))
+            setPosts(mergeLocalPosts(fetched, true))
             if (user) {
               const ls = await enrichLikes(fetched, user.uid)
               setLiked(ls)
@@ -168,14 +204,14 @@ export function Feed() {
           } catch (err) {
             console.error("Feed snapshot processing error:", err)
             // Even on error, try to show at least local posts!
-            setPosts(mergeLocalPosts([]))
+            setPosts(mergeLocalPosts([], true))
           } finally {
             setLoading(false)
           }
         },
         error => {
           console.error("Feed snapshot listen error:", error)
-          setPosts(mergeLocalPosts([]))
+          setPosts(mergeLocalPosts([], true))
           setLoading(false)
         }
       )
@@ -188,20 +224,20 @@ export function Feed() {
           const fetched = snap.docs.map(d => (normalizePost({ id: d.id, ...d.data() } as Parameters<typeof normalizePost>[0])))
           lastDocRef.current = snap.docs[snap.docs.length - 1] ?? null
           setHasMore(snap.docs.length === PAGE_SIZE)
-          setPosts(mergeLocalPosts(fetched))
+          setPosts(mergeLocalPosts(fetched, false))
           if (user) {
             const ls = await enrichLikes(fetched, user.uid)
             setLiked(ls)
           }
         } catch (err) {
           console.error("Feed getDocs processing error:", err)
-          setPosts(mergeLocalPosts([]))
+          setPosts(mergeLocalPosts([], false))
         } finally {
           setLoading(false)
         }
       }).catch(err => {
         console.error("Feed getDocs query error:", err)
-        setPosts(mergeLocalPosts([]))
+        setPosts(mergeLocalPosts([], false))
         setLoading(false)
       })
     }
@@ -228,7 +264,7 @@ export function Feed() {
         const ls = await enrichLikes(fetched, user.uid)
         setLiked(prev => new Set([...prev, ...ls]))
       }
-      setPosts(prev => mergeLocalPosts([...prev, ...fetched]))
+      setPosts(prev => mergeLocalPosts([...prev, ...fetched], sort === "recent"))
     } catch (err) {
       console.error("Feed loadMore error:", err)
     } finally {

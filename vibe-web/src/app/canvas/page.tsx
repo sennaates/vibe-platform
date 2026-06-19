@@ -57,6 +57,7 @@ export default function CanvasPage() {
   const [emotion, setEmotion] = useState<EmotionState | null>(null)
   const [bpm, setBpm]         = useState(72)
   const [bg, setBg]           = useState<BgType>("blank")
+  const [bgColor, setBgColor] = useState("#FAF8F4")
 
   if (!user || !profile) {
     return (
@@ -137,7 +138,7 @@ export default function CanvasPage() {
   }
 
   if (!emotion) {
-    return <EmotionPicker onSelect={(e, b, bgType) => { setEmotion(e); setBpm(b); setBg(bgType) }} />
+    return <EmotionPicker onSelect={(e, b, bgType, bgVal) => { setEmotion(e); setBpm(b); setBg(bgType); setBgColor(bgVal) }} />
   }
 
   return (
@@ -145,6 +146,7 @@ export default function CanvasPage() {
       emotion={emotion}
       bpm={bpm}
       bg={bg}
+      bgColor={bgColor}
       onSave={handleSave}
       onDiscard={() => setEmotion(null)}
     />

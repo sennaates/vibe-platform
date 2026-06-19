@@ -34,7 +34,11 @@ struct SharePostView: View {
 
             // 2. Desen çiz (grid / lined)
             if bgType != .blank {
-                UIColor.label.withAlphaComponent(0.15).setStroke()
+                var r: CGFloat = 0, g: CGFloat = 0, b: CGFloat = 0, a: CGFloat = 0
+                bgColor.getRed(&r, green: &g, blue: &b, alpha: &a)
+                let brightness = (r * 299 + g * 587 + b * 114) / 1000
+                let strokeColor = brightness < 0.5 ? UIColor.white.withAlphaComponent(0.08) : UIColor.black.withAlphaComponent(0.12)
+                strokeColor.setStroke()
                 cgCtx.setLineWidth(0.5)
 
                 if bgType == .grid {

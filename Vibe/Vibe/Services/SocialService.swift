@@ -250,6 +250,53 @@ class SocialService: ObservableObject {
             }
     }
 
+    func fetchFollowerIds(userId: String, completion: @escaping ([String]) -> Void) {
+        db.collection("follows")
+            .whereField("followedId", isEqualTo: userId)
+            .getDocuments { snapshot, _ in
+                let ids = snapshot?.documents.compactMap {
+                    $0.data()["followerId"] as? String
+                } ?? []
+                completion(ids)
+            }
+    }
+
+    func fetchUsers(userIds: [String], completion: @escaping ([SocialUser]) -> Void) {
+        guard !userIds.isEmpty else {
+            completion([])
+            return
+        }
+
+        let group = DispatchGroup()
+        var allUsers: [SocialUser] = []
+        let chunks = stride(from: 0, to: userIds.count, by: 30).map {
+            Array(userIds[$0..<min($0 + 30, userIds.count)])
+        }
+
+        for chunk in chunks {
+            group.enter()
+            db.collection("users")
+                .whereField(FieldPath.documentID(), in: chunk)
+                .getDocuments { snapshot, _ in
+                    let users = snapshot?.documents.compactMap { doc -> SocialUser? in
+                        SocialUser.from(doc.data(), id: doc.documentID)
+                    } ?? []
+                    allUsers.append(contentsOf: users)
+                    group.leave()
+                }
+        }
+
+        group.notify(queue: .main) {
+            let idToIndex = Dictionary(uniqueKeysWithValues: userIds.enumerated().map { ($0.element, $0.offset) })
+            let sortedUsers = allUsers.sorted {
+                let idx1 = idToIndex[$0.id] ?? Int.max
+                let idx2 = idToIndex[$1.id] ?? Int.max
+                return idx1 < idx2
+            }
+            completion(sortedUsers)
+        }
+    }
+
     func fetchUserPosts(userId: String, completion: @escaping ([Post]) -> Void) {
         db.collection("posts")
             .whereField("userId", isEqualTo: userId)

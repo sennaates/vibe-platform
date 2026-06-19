@@ -4,6 +4,7 @@ import SwiftUI
 
 struct AuthView: View {
     @EnvironmentObject var authService: AuthService
+    @AppStorage("hasCompletedOnboarding") private var hasCompletedOnboarding = true
     @State private var mode: AuthMode = .signIn
     @State private var signUpStep: Int = 1      // 1 = kimlik, 2 = avatar
 
@@ -232,6 +233,19 @@ struct AuthView: View {
             }
             .disabled(email.isEmpty || password.isEmpty || authService.isLoading)
             .padding(.top, 4)
+            
+            Button {
+                HapticManager.impact(.light)
+                hasCompletedOnboarding = false
+            } label: {
+                HStack(spacing: 6) {
+                    Image(systemName: "sparkles")
+                    Text("Uygulamaya yeni geldim (Tanıtımı Gör)")
+                }
+                .font(.footnote.weight(.medium))
+                .foregroundColor(.white.opacity(0.8))
+                .padding(.vertical, 8)
+            }
         }
     }
 

@@ -12,14 +12,24 @@ const BG_OPTIONS: { value: BgType; label: string; emoji: string; desc: string }[
   { value: "lined",  label: "Çizgili Sayfa",  emoji: "📝", desc: "Yazı ve Notlar" },
 ]
 
+export const BG_COLORS = [
+  { value: "#FAF8F4", label: "Krem", class: "bg-[#FAF8F4] border-[#E6E2DA]" },
+  { value: "#FFFFFF", label: "Beyaz", class: "bg-white border-[#E6E2DA]" },
+  { value: "#1E1E1E", label: "Kömür", class: "bg-[#1E1E1E] border-stone-800" },
+  { value: "#E8EFE9", label: "Adaçayı", class: "bg-[#E8EFE9] border-[#D4DDD6]" },
+  { value: "#EFE8EF", label: "Lavanta", class: "bg-[#EFE8EF] border-[#DCD3DC]" },
+  { value: "#E6EEF4", label: "Muted Mavi", class: "bg-[#E6EEF4] border-[#D0DCE5]" },
+]
+
 interface EmotionPickerProps {
-  onSelect: (emotion: EmotionState, bpm: number, bg: BgType) => void
+  onSelect: (emotion: EmotionState, bpm: number, bg: BgType, bgColor: string) => void
 }
 
 export function EmotionPicker({ onSelect }: EmotionPickerProps) {
   const [selected, setSelected] = useState<EmotionState | null>(null)
   const [bpm, setBpm]           = useState(72)
   const [bg, setBg]             = useState<BgType>("blank")
+  const [bgColor, setBgColor]   = useState("#FAF8F4")
 
   const accent = selected?.color ?? "#D9723F"
 
@@ -109,6 +119,31 @@ export function EmotionPicker({ onSelect }: EmotionPickerProps) {
                 </button>
               ))}
             </div>
+
+            {/* Arka Plan Rengi */}
+            <div className="border-t border-rim mt-4 pt-4">
+              <p className="text-xs font-semibold text-ink-subtle uppercase tracking-widest mb-3">Arka Plan Rengi</p>
+              <div className="flex items-center gap-2 flex-wrap">
+                {BG_COLORS.map(c => (
+                  <button
+                    key={c.value}
+                    onClick={() => setBgColor(c.value)}
+                    title={c.label}
+                    className={cn(
+                      "w-8 h-8 rounded-full border transition-all active:scale-90 flex items-center justify-center cursor-pointer shadow-sm",
+                      c.class,
+                      bgColor === c.value
+                        ? "ring-2 ring-accent ring-offset-2 scale-105 border-transparent"
+                        : "hover:scale-105"
+                    )}
+                  >
+                    {bgColor === c.value && (
+                      <div className={cn("w-1.5 h-1.5 rounded-full", c.value === "#1E1E1E" ? "bg-white" : "bg-accent")} />
+                    )}
+                  </button>
+                ))}
+              </div>
+            </div>
           </div>
         </div>
 
@@ -123,7 +158,7 @@ export function EmotionPicker({ onSelect }: EmotionPickerProps) {
             </div>
           )}
           <button
-            onClick={() => selected && onSelect(selected, bpm, bg)}
+            onClick={() => selected && onSelect(selected, bpm, bg, bgColor)}
             disabled={!selected}
             className="flex-1 py-3.5 rounded-[16px] text-sm font-bold transition-all active:scale-[0.98] disabled:opacity-40 disabled:cursor-not-allowed shadow-sm"
             style={selected
