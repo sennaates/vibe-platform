@@ -237,7 +237,7 @@ export default function SettingsPage() {
   }
 
   async function handleLogout() {
-    await signOut(auth)
+    await signOut(auth).catch(() => {})
     router.push("/")
   }
 

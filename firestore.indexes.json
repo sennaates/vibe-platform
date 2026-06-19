@@ -12,13 +12,6 @@
       "collectionGroup": "posts",
       "queryScope": "COLLECTION",
       "fields": [
-        { "fieldPath": "likesCount", "order": "DESCENDING" }
-      ]
-    },
-    {
-      "collectionGroup": "posts",
-      "queryScope": "COLLECTION",
-      "fields": [
         { "fieldPath": "tags",      "arrayConfig": "CONTAINS" },
         { "fieldPath": "createdAt", "order": "DESCENDING" }
       ]
@@ -45,13 +38,6 @@
       "fields": [
         { "fieldPath": "followedId", "order": "ASCENDING" },
         { "fieldPath": "createdAt",  "order": "DESCENDING" }
-      ]
-    },
-    {
-      "collectionGroup": "items",
-      "queryScope": "COLLECTION",
-      "fields": [
-        { "fieldPath": "likedAt",   "order": "DESCENDING" }
       ]
     },
     {

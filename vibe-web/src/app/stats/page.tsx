@@ -12,6 +12,7 @@ import { db } from "@/lib/firebase"
 import { useAuth } from "@/hooks/useAuth"
 import { Timestamp } from "firebase/firestore"
 import { normalizePost, type NormalizedPost } from "@/types"
+import { toDate } from "@/lib/utils"
 
 interface EmotionStat { label: string; emoji: string; count: number; color: string }
 
@@ -24,13 +25,14 @@ const EMOTION_COLORS: Record<string, string> = {
 
 function calcStreak(posts: NormalizedPost[]): number {
   if (posts.length === 0) return 0
-  const daySet = new Set(
-    posts.map(p => {
-      const d = (p.createdAt as Timestamp).toDate()
+  const daySet = new Set<number>()
+  posts.forEach(p => {
+    const d = toDate(p.createdAt)
+    if (d) {
       d.setHours(0, 0, 0, 0)
-      return d.getTime()
-    })
-  )
+      daySet.add(d.getTime())
+    }
+  })
   const today = new Date()
   today.setHours(0, 0, 0, 0)
   let streak = 0
@@ -112,8 +114,10 @@ export default function StatsPage() {
   const DAYS = ["Paz", "Pzt", "Sal", "Çar", "Per", "Cum", "Cmt"]
   const dayMap: Record<number, number> = { 0:0, 1:0, 2:0, 3:0, 4:0, 5:0, 6:0 }
   posts.forEach(p => {
-    const d = (p.createdAt as Timestamp).toDate().getDay()
-    dayMap[d]++
+    const d = toDate(p.createdAt)
+    if (d) {
+      dayMap[d.getDay()]++
+    }
   })
   const dayData = DAYS.map((name, i) => ({ name, count: dayMap[i] }))
 
@@ -129,10 +133,12 @@ export default function StatsPage() {
   const heatCells: { date: string; count: number; level: number }[] = []
   const postDayMap: Record<string, number> = {}
   posts.forEach(p => {
-    const d = (p.createdAt as Timestamp).toDate()
-    d.setHours(0,0,0,0)
-    const key = d.toISOString().slice(0,10)
-    postDayMap[key] = (postDayMap[key] ?? 0) + 1
+    const d = toDate(p.createdAt)
+    if (d) {
+      d.setHours(0,0,0,0)
+      const key = d.toISOString().slice(0,10)
+      postDayMap[key] = (postDayMap[key] ?? 0) + 1
+    }
   })
   for (let i = 83; i >= 0; i--) {
     const d = new Date(today); d.setDate(d.getDate() - i)

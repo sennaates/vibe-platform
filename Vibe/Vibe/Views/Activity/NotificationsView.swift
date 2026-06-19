@@ -150,72 +150,72 @@ private struct NotifRow: View {
     var body: some View {
         HStack(spacing: 12) {
             // Avatar + ikon rozeti
-            ZStack(alignment: .bottomTrailing) {
-                ZStack {
-                    Circle()
-                        .fill(AppColor.surfaceMuted)
-                        .frame(width: 46, height: 46)
-                    Text(notif.fromUserAvatar)
-                        .font(.system(size: 22))
-                }
+            Button(action: onUserTap) {
+                ZStack(alignment: .bottomTrailing) {
+                    ZStack {
+                        Circle()
+                            .fill(AppColor.surfaceMuted)
+                            .frame(width: 46, height: 46)
+                        Text(notif.fromUserAvatar)
+                            .font(.system(size: 22))
+                    }
 
-                ZStack {
-                    Circle()
-                        .fill(icon.color)
-                        .frame(width: 18, height: 18)
-                    Image(systemName: icon.name)
-                        .font(.system(size: 9, weight: .semibold))
-                        .foregroundColor(.white)
+                    ZStack {
+                        Circle()
+                            .fill(icon.color)
+                            .frame(width: 18, height: 18)
+                        Image(systemName: icon.name)
+                            .font(.system(size: 9, weight: .semibold))
+                            .foregroundColor(.white)
+                    }
+                    .offset(x: 4, y: 4)
                 }
-                .offset(x: 4, y: 4)
             }
-            .contentShape(Circle())
-            .onTapGesture {
-                onUserTap()
-            }
+            .buttonStyle(.plain)
 
             // Metin
-            VStack(alignment: .leading, spacing: 3) {
-                Group {
-                    Text(notif.fromUserName)
-                        .font(.system(size: 14, weight: .semibold))
-                        .foregroundColor(AppColor.ink)
-                    + Text(" \(body2)")
-                        .font(.system(size: 14))
-                        .foregroundColor(AppColor.inkMuted)
+            Button(action: {
+                if notif.type == "follow" {
+                    onUserTap()
+                } else {
+                    onPostTap()
                 }
-                .contentShape(Rectangle())
-                .onTapGesture {
-                    if notif.type == "follow" {
-                        onUserTap()
-                    } else {
-                        onPostTap()
+            }) {
+                VStack(alignment: .leading, spacing: 3) {
+                    Group {
+                        Text(notif.fromUserName)
+                            .font(.system(size: 14, weight: .semibold))
+                            .foregroundColor(AppColor.ink)
+                        + Text(" \(body2)")
+                            .font(.system(size: 14))
+                            .foregroundColor(AppColor.inkMuted)
                     }
+                    
+                    Text(relativeTime(notif.createdAt))
+                        .font(.system(size: 11))
+                        .foregroundColor(AppColor.inkMuted.opacity(0.7))
                 }
-
-                Text(relativeTime(notif.createdAt))
-                    .font(.system(size: 11))
-                    .foregroundColor(AppColor.inkMuted.opacity(0.7))
+                .frame(maxWidth: .infinity, alignment: .leading)
             }
+            .buttonStyle(.plain)
 
             Spacer()
 
             // Post thumbnail (like / comment)
             if let imgUrl = notif.postImageUrl, !imgUrl.isEmpty {
-                AsyncImage(url: URL(string: imgUrl)) { phase in
-                    switch phase {
-                    case .success(let img):
-                        img.resizable().scaledToFill()
-                    default:
-                        AppColor.surfaceMuted
+                Button(action: onPostTap) {
+                    AsyncImage(url: URL(string: imgUrl)) { phase in
+                        switch phase {
+                        case .success(let img):
+                            img.resizable().scaledToFill()
+                        default:
+                            AppColor.surfaceMuted
+                        }
                     }
+                    .frame(width: 50, height: 50)
+                    .clipShape(RoundedRectangle(cornerRadius: AppRadius.sm, style: .continuous))
                 }
-                .frame(width: 50, height: 50)
-                .clipShape(RoundedRectangle(cornerRadius: AppRadius.sm, style: .continuous))
-                .contentShape(Rectangle())
-                .onTapGesture {
-                    onPostTap()
-                }
+                .buttonStyle(.plain)
             }
         }
         .padding(.vertical, 4)

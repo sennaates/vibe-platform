@@ -39,10 +39,81 @@ function PostSkeleton() {
 async function enrichLikes(posts: NormalizedPost[], userId: string): Promise<Set<string>> {
   const likedSet = new Set<string>()
   await Promise.all(posts.map(async p => {
-    const s = await getDoc(doc(db, "posts", p.id, "likes", userId))
-    if (s.exists()) likedSet.add(p.id)
+    try {
+      const s = await getDoc(doc(db, "posts", p.id, "likes", userId))
+      if (s.exists()) likedSet.add(p.id)
+    } catch {}
   }))
   return likedSet
+}
+
+const MOCK_PRESET_POSTS: NormalizedPost[] = [
+  {
+    id: "preset-1",
+    userId: "user-alice",
+    userName: "Melis Şen",
+    userAvatar: "🌸",
+    userColor: "pink",
+    imageUrl: "https://images.unsplash.com/photo-1579783900882-c0d3dad7b119?w=800&auto=format&fit=crop&q=80",
+    emotion: "Huzurlu 🌸",
+    bpm: 75,
+    caption: "Huzurlu bir sabah ritmiyle güne başlamak... Fırçamın yumuşaklığı içimdeki sakinliği yansıtıyor. 🌊✨ #huzurlu #sanat",
+    likesCount: 42,
+    commentsCount: 3,
+    createdAt: { seconds: Math.floor(Date.now() / 1000) - 1800, nanoseconds: 0 } as any
+  },
+  {
+    id: "preset-2",
+    userId: "user-bob",
+    userName: "Caner Demir",
+    userAvatar: "⚡",
+    userColor: "orange",
+    imageUrl: "https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=800&auto=format&fit=crop&q=80",
+    emotion: "Enerjik ⚡",
+    bpm: 140,
+    caption: "140 BPM ritimle karalama tarzı fırça vuruşları! Müzik ve sanatın muhteşem uyumu. 🎸🔥 #enerjik #ritim #vibe",
+    likesCount: 89,
+    commentsCount: 11,
+    createdAt: { seconds: Math.floor(Date.now() / 1000) - 7200, nanoseconds: 0 } as any
+  },
+  {
+    id: "preset-3",
+    userId: "user-charlie",
+    userName: "Ece Kaya",
+    userAvatar: "🌊",
+    userColor: "blue",
+    imageUrl: "https://images.unsplash.com/photo-1541701494587-cb58502866ab?w=800&auto=format&fit=crop&q=80",
+    emotion: "Sakin 🌊",
+    bpm: 60,
+    caption: "Dalgaların ritmini dinleyerek mavi tonlarında akış... Zihni dinlendirmenin en güzel yolu. 🧘‍♂️💙 #sakin #mavi",
+    likesCount: 56,
+    commentsCount: 7,
+    createdAt: { seconds: Math.floor(Date.now() / 1000) - 14400, nanoseconds: 0 } as any
+  }
+]
+
+function mergeLocalPosts(fetched: NormalizedPost[]): NormalizedPost[] {
+  if (typeof window === "undefined") return fetched
+  try {
+    const local = JSON.parse(localStorage.getItem("vibe_local_posts") ?? "[]") as NormalizedPost[]
+    let all = [...local, ...fetched]
+    
+    // Fallback to presets if feed is empty (ensures the feed always looks complete during demos)
+    if (all.length === 0) {
+      all = [...MOCK_PRESET_POSTS]
+    }
+
+    const seen = new Set<string>()
+    return all.filter(p => {
+      const key = p.id
+      if (seen.has(key)) return false
+      seen.add(key)
+      return true
+    })
+  } catch (e) {
+    console.error("Failed to merge local posts:", e)
+    return fetched
+  }
 }
 
 export function Feed() {
@@ -64,7 +135,7 @@ export function Feed() {
     if (!user) {              // giriş yapılmamış → listener başlatma
       setTimeout(() => {
         setLoading(false)
-        setPosts([])
+        setPosts(mergeLocalPosts([]))
       }, 0)
       return
     }
@@ -82,30 +153,55 @@ export function Feed() {
     if (sort === "recent") {
       // Realtime ilk sayfa
       const q = query(collection(db, "posts"), orderBy("createdAt", "desc"), limit(PAGE_SIZE))
-      const unsub = onSnapshot(q, async snap => {
-        const fetched = snap.docs.map(d => (normalizePost({ id: d.id, ...d.data() } as Parameters<typeof normalizePost>[0])))
-        lastDocRef.current = snap.docs[snap.docs.length - 1] ?? null
-        setHasMore(snap.docs.length === PAGE_SIZE)
-        setPosts(fetched)
-        if (user) {
-          const ls = await enrichLikes(fetched, user.uid)
-          setLiked(ls)
+      const unsub = onSnapshot(
+        q, 
+        async snap => {
+          try {
+            const fetched = snap.docs.map(d => (normalizePost({ id: d.id, ...d.data() } as Parameters<typeof normalizePost>[0])))
+            lastDocRef.current = snap.docs[snap.docs.length - 1] ?? null
+            setHasMore(snap.docs.length === PAGE_SIZE)
+            setPosts(mergeLocalPosts(fetched))
+            if (user) {
+              const ls = await enrichLikes(fetched, user.uid)
+              setLiked(ls)
+            }
+          } catch (err) {
+            console.error("Feed snapshot processing error:", err)
+            // Even on error, try to show at least local posts!
+            setPosts(mergeLocalPosts([]))
+          } finally {
+            setLoading(false)
+          }
+        },
+        error => {
+          console.error("Feed snapshot listen error:", error)
+          setPosts(mergeLocalPosts([]))
+          setLoading(false)
         }
-        setLoading(false)
-      })
+      )
       unsubRef.current = unsub
       return () => { unsub(); unsubRef.current = null }
     } else {
       const q = query(collection(db, "posts"), orderBy("likesCount", "desc"), limit(PAGE_SIZE))
       getDocs(q).then(async snap => {
-        const fetched = snap.docs.map(d => (normalizePost({ id: d.id, ...d.data() } as Parameters<typeof normalizePost>[0])))
-        lastDocRef.current = snap.docs[snap.docs.length - 1] ?? null
-        setHasMore(snap.docs.length === PAGE_SIZE)
-        setPosts(fetched)
-        if (user) {
-          const ls = await enrichLikes(fetched, user.uid)
-          setLiked(ls)
+        try {
+          const fetched = snap.docs.map(d => (normalizePost({ id: d.id, ...d.data() } as Parameters<typeof normalizePost>[0])))
+          lastDocRef.current = snap.docs[snap.docs.length - 1] ?? null
+          setHasMore(snap.docs.length === PAGE_SIZE)
+          setPosts(mergeLocalPosts(fetched))
+          if (user) {
+            const ls = await enrichLikes(fetched, user.uid)
+            setLiked(ls)
+          }
+        } catch (err) {
+          console.error("Feed getDocs processing error:", err)
+          setPosts(mergeLocalPosts([]))
+        } finally {
+          setLoading(false)
         }
+      }).catch(err => {
+        console.error("Feed getDocs query error:", err)
+        setPosts(mergeLocalPosts([]))
         setLoading(false)
       })
     }
@@ -115,25 +211,30 @@ export function Feed() {
     if (isLoadingMoreRef.current || !hasMore || !lastDocRef.current) return
     isLoadingMoreRef.current = true
     setLoadingMore(true)
-    const field = sort === "recent" ? "createdAt" : "likesCount"
-    const dir   = sort === "recent" ? "desc" : "desc"
-    const q = query(
-      collection(db, "posts"),
-      orderBy(field, dir),
-      startAfter(lastDocRef.current),
-      limit(PAGE_SIZE)
-    )
-    const snap = await getDocs(q)
-    const fetched = snap.docs.map(d => (normalizePost({ id: d.id, ...d.data() } as Parameters<typeof normalizePost>[0])))
-    lastDocRef.current = snap.docs[snap.docs.length - 1] ?? null
-    setHasMore(snap.docs.length === PAGE_SIZE)
-    if (user) {
-      const ls = await enrichLikes(fetched, user.uid)
-      setLiked(prev => new Set([...prev, ...ls]))
+    try {
+      const field = sort === "recent" ? "createdAt" : "likesCount"
+      const dir   = sort === "recent" ? "desc" : "desc"
+      const q = query(
+        collection(db, "posts"),
+        orderBy(field, dir),
+        startAfter(lastDocRef.current),
+        limit(PAGE_SIZE)
+      )
+      const snap = await getDocs(q)
+      const fetched = snap.docs.map(d => (normalizePost({ id: d.id, ...d.data() } as Parameters<typeof normalizePost>[0])))
+      lastDocRef.current = snap.docs[snap.docs.length - 1] ?? null
+      setHasMore(snap.docs.length === PAGE_SIZE)
+      if (user) {
+        const ls = await enrichLikes(fetched, user.uid)
+        setLiked(prev => new Set([...prev, ...ls]))
+      }
+      setPosts(prev => mergeLocalPosts([...prev, ...fetched]))
+    } catch (err) {
+      console.error("Feed loadMore error:", err)
+    } finally {
+      setLoadingMore(false)
+      isLoadingMoreRef.current = false
     }
-    setPosts(prev => [...prev, ...fetched])
-    setLoadingMore(false)
-    isLoadingMoreRef.current = false
   }, [hasMore, sort, user])
 
   // Intersection observer — sentinel görününce daha fazla yükle

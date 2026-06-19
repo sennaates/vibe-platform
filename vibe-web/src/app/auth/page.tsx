@@ -12,6 +12,28 @@ import { cn } from "@/lib/utils"
 const EMOJIS = ["🎨","🌊","⚡","🌸","🔥","🌙","🦋","🎭","🌿","💫","🎵","🦊"]
 const COLOR_KEYS = Object.keys(profileColors)
 
+function getFriendlyErrorMessage(err: any): string {
+  const code = err?.code || "";
+  const msg = err?.message || "";
+  
+  if (code === "auth/invalid-credential" || msg.includes("invalid-credential") || code === "auth/wrong-password" || code === "auth/user-not-found") {
+    return "E-posta adresi veya şifre hatalı. Lütfen bilgilerinizi kontrol edip tekrar deneyin."
+  }
+  if (code === "auth/invalid-email" || msg.includes("invalid-email")) {
+    return "Lütfen geçerli bir e-posta adresi girin."
+  }
+  if (code === "auth/email-already-in-use" || msg.includes("email-already-in-use")) {
+    return "Bu e-posta adresi zaten kullanımda. Başka bir e-posta adresi deneyin veya giriş yapın."
+  }
+  if (code === "auth/weak-password" || msg.includes("weak-password")) {
+    return "Şifre çok zayıf. Şifreniz en az 6 karakterden oluşmalıdır."
+  }
+  if (code === "auth/network-request-failed" || msg.includes("network-request-failed")) {
+    return "Ağ hatası: İnternet bağlantınızı kontrol edin."
+  }
+  return msg || "Bir hata oluştu. Lütfen tekrar deneyin."
+}
+
 export default function AuthPage() {
   const router = useRouter()
   const [mode, setMode]         = useState<"login" | "signup">("login")
@@ -26,9 +48,15 @@ export default function AuthPage() {
 
   async function handleLogin() {
     setError(""); setLoading(true)
-    try { await signInWithEmailAndPassword(auth, email, password); router.push("/") }
-    catch { setError("E-posta veya şifre hatalı.") }
-    finally { setLoading(false) }
+    try { 
+      await signInWithEmailAndPassword(auth, email, password)
+      router.push("/")
+    } catch (e: any) { 
+      console.error("Login error:", e)
+      setError(`Giriş Hatası: ${getFriendlyErrorMessage(e)}`) 
+    } finally { 
+      setLoading(false) 
+    }
   }
 
   async function handleSignup() {
@@ -47,21 +75,12 @@ export default function AuthPage() {
         postsCount: 0, createdAt: serverTimestamp(),
       })
       router.push("/")
-    } catch (e: unknown) {
-      const msg = e instanceof Error ? e.message : ""
-      if (msg.includes("email-already-in-use")) {
-        setError("Bu e-posta zaten kullanımda.")
-        setStep(1)
-      } else if (msg.includes("weak-password")) {
-        setError("Şifre en az 6 karakter olmalı.")
-        setStep(1)
-      } else if (msg.includes("invalid-email")) {
-        setError("Geçersiz e-posta adresi.")
-        setStep(1)
-      } else {
-        setError("Bir hata oluştu, tekrar dene.")
-      }
-    } finally { setLoading(false) }
+    } catch (e: any) {
+      console.error("Signup error:", e)
+      setError(`Kayıt Hatası: ${getFriendlyErrorMessage(e)}`)
+    } finally { 
+      setLoading(false) 
+    }
   }
 
   const selectedColor = profileColors[color] ?? "#4A7FA5"

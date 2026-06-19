@@ -10,5 +10,8 @@
     "start:backend": "npm start --prefix backend",
     "install:all": "npm install --prefix vibe-web && npm install --prefix backend"
   },
-  "private": true
+  "private": true,
+  "dependencies": {
+    "ws": "^8.21.0"
+  }
 }

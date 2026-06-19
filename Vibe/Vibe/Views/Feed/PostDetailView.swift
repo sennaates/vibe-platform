@@ -13,6 +13,7 @@ struct PostDetailView: View {
     @State private var isLoadingComments = true
     @State private var commentListener: ListenerRegistration? = nil
     @State private var hashtagNavTag: HashtagNavItem? = nil
+    @State private var userNavTag: UserNavItem? = nil
 
     // Yorum yanıtlama
     @State private var replyTo: Comment? = nil
@@ -38,7 +39,9 @@ struct PostDetailView: View {
                     currentUserId: authService.firebaseUser?.uid ?? "",
                     onLike: onLike,
                     onComment: { commentFocused = true },
-                    onUserTap: {},
+                    onUserTap: {
+                        userNavTag = UserNavItem(userId: post.userId)
+                    },
                     onDelete: onDelete.map { del in { del(); dismiss() } },
                     onHashtagTap: { tag in hashtagNavTag = HashtagNavItem(tag: tag) }
                 )
@@ -118,7 +121,10 @@ struct PostDetailView: View {
                                 },
                                 onDelete: (comment.userId == authService.firebaseUser?.uid || isOwnPost)
                                     ? { deleteComment(comment) }
-                                    : nil
+                                    : nil,
+                                onUserTap: {
+                                    userNavTag = UserNavItem(userId: comment.userId)
+                                }
                             )
                             if comment.id != comments.last?.id {
                                 Divider()
@@ -145,6 +151,10 @@ struct PostDetailView: View {
         .navigationBarTitleDisplayMode(.inline)
         .navigationDestination(item: $hashtagNavTag) { item in
             HashtagFeedView(tag: item.tag)
+                .environmentObject(authService)
+        }
+        .navigationDestination(item: $userNavTag) { item in
+            PublicProfileView(userId: item.userId)
                 .environmentObject(authService)
         }
         .safeAreaInset(edge: .bottom) {
@@ -343,6 +353,7 @@ private struct CommentRow: View {
     let isOwn: Bool
     var onReply: (() -> Void)? = nil
     var onDelete: (() -> Void)? = nil
+    var onUserTap: (() -> Void)? = nil
 
     @State private var showActions = false
 
@@ -364,17 +375,24 @@ private struct CommentRow: View {
             }
 
             HStack(alignment: .top, spacing: 10) {
-                Text(comment.userAvatarEmoji)
-                    .font(.system(size: 18))
-                    .frame(width: 38, height: 38)
-                    .background(AppColor.surfaceMuted)
-                    .clipShape(Circle())
+                Button(action: { onUserTap?() }) {
+                    Text(comment.userAvatarEmoji)
+                        .font(.system(size: 18))
+                        .frame(width: 38, height: 38)
+                        .background(AppColor.surfaceMuted)
+                        .clipShape(Circle())
+                }
+                .buttonStyle(.plain)
 
                 VStack(alignment: .leading, spacing: 3) {
                     HStack(spacing: 6) {
-                        Text(comment.userDisplayName)
-                            .font(.system(size: 13, weight: .semibold))
-                            .foregroundColor(AppColor.ink)
+                        Button(action: { onUserTap?() }) {
+                            Text(comment.userDisplayName)
+                                .font(.system(size: 13, weight: .semibold))
+                                .foregroundColor(AppColor.ink)
+                        }
+                        .buttonStyle(.plain)
+                        
                         Text("·")
                             .foregroundColor(AppColor.inkMuted)
                         Text(comment.createdAt, style: .relative)

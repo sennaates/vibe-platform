@@ -11,6 +11,7 @@ struct HashtagFeedView: View {
     @State private var hasMore = true
     @State private var lastDoc: DocumentSnapshot? = nil
     @State private var selectedPost: Post? = nil
+    @State private var userNavTag: UserNavItem? = nil
 
     private let db = Firestore.firestore()
     private let pageSize = 20
@@ -43,7 +44,9 @@ struct HashtagFeedView: View {
                                 currentUserId: authService.firebaseUser?.uid ?? "",
                                 onLike: { toggleLike(post: post) },
                                 onComment: { selectedPost = post },
-                                onUserTap: {}
+                                onUserTap: {
+                                    userNavTag = UserNavItem(userId: post.userId)
+                                }
                             )
                             .padding(.horizontal, AppSpacing.md)
                             .onAppear {
@@ -71,6 +74,10 @@ struct HashtagFeedView: View {
         .navigationBarTitleDisplayMode(.large)
         .navigationDestination(item: $selectedPost) { post in
             PostDetailView(post: post, onLike: { toggleLike(post: post) })
+                .environmentObject(authService)
+        }
+        .navigationDestination(item: $userNavTag) { item in
+            PublicProfileView(userId: item.userId)
                 .environmentObject(authService)
         }
         .onAppear { loadPosts() }

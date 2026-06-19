@@ -92,17 +92,22 @@ export function FollowingFeed() {
     }
 
     async function init() {
-      // Fetch followed user IDs
-      const followSnap = await getDocs(
-        query(collection(db, "follows"), where("followerId", "==", user!.uid), limit(30))
-      )
-      const ids = followSnap.docs.map(d => d.data().followedId as string)
-      followedIdsRef.current = ids
+      try {
+        // Fetch followed user IDs
+        const followSnap = await getDocs(
+          query(collection(db, "follows"), where("followerId", "==", user!.uid), limit(30))
+        )
+        const ids = followSnap.docs.map(d => d.data().followedId as string)
+        followedIdsRef.current = ids
 
-      if (ids.length === 0) { setNoFollows(true); setLoading(false); return }
+        if (ids.length === 0) { setNoFollows(true); setLoading(false); return }
 
-      await loadMore()
-      setLoading(false)
+        await loadMore()
+      } catch (err) {
+        console.error("FollowingFeed init error:", err)
+      } finally {
+        setLoading(false)
+      }
     }
 
     init()

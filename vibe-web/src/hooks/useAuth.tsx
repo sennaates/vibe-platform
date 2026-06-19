@@ -26,12 +26,23 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     let unsubProfile: (() => void) | null = null
 
+    // Fallback timer: if auth/profile doesn't resolve in 4.0 seconds, set loading to false
+    const fallbackTimer = setTimeout(() => {
+      setLoading((currentLoading) => {
+        if (currentLoading) {
+          console.warn("Auth/Profile initialization timed out. Falling back to guest/cache mode.");
+          return false;
+        }
+        return currentLoading;
+      });
+    }, 4000);
+
     const unsubAuth = onAuthStateChanged(auth, (firebaseUser) => {
-      setUser(firebaseUser)
+      setUser(firebaseUser);
 
       if (unsubProfile) {
-        unsubProfile()
-        unsubProfile = null
+        unsubProfile();
+        unsubProfile = null;
       }
 
       if (firebaseUser) {
@@ -40,37 +51,41 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           doc(db, "users", firebaseUser.uid),
           (snap) => {
             if (snap.exists()) {
-              const data = snap.data()
-              setProfile({ uid: snap.id, ...data } as SocialUser)
+              const data = snap.data();
+              setProfile({ uid: snap.id, ...data } as SocialUser);
               
               // Auto-migrate: set displayNameLowercase if it is missing
               if (data && data.displayName && !data.displayNameLowercase) {
                 updateDoc(snap.ref, {
                   displayNameLowercase: data.displayName.toLowerCase()
-                }).catch((err) => console.error("Profile auto-migration error:", err))
+                }).catch((err) => console.error("Profile auto-migration error:", err));
               }
             } else {
-              setProfile(null)
+              setProfile(null);
             }
-            setLoading(false)
+            setLoading(false);
+            clearTimeout(fallbackTimer);
           },
           (error) => {
-            console.error("Profile listen error:", error)
-            setProfile(null)
-            setLoading(false)
+            console.error("Profile listen error:", error);
+            setProfile(null);
+            setLoading(false);
+            clearTimeout(fallbackTimer);
           }
-        )
+        );
       } else {
-        setProfile(null)
-        setLoading(false)
+        setProfile(null);
+        setLoading(false);
+        clearTimeout(fallbackTimer);
       }
-    })
+    });
 
     return () => {
-      unsubAuth()
-      if (unsubProfile) unsubProfile()
-    }
-  }, [])
+      clearTimeout(fallbackTimer);
+      unsubAuth();
+      if (unsubProfile) unsubProfile();
+    };
+  }, []);
 
   return (
     <AuthContext.Provider value={{ user, profile, loading }}>

@@ -11,6 +11,7 @@ struct PostCard: View {
     var onHashtagTap: ((String) -> Void)? = nil
     var onLikesTap: (() -> Void)? = nil
 
+    @EnvironmentObject var authService: AuthService
     @State private var isLiking = false
     @State private var showLikesSheet = false
     @State private var isLiked: Bool
@@ -177,6 +178,7 @@ struct PostCard: View {
         .shadow(color: .black.opacity(0.07), radius: 12, x: 0, y: 3)
         .sheet(isPresented: $showLikesSheet) {
             PostLikesView(postId: post.id)
+                .environmentObject(authService)
                 .presentationDetents([.medium, .large])
                 .presentationDragIndicator(.visible)
         }

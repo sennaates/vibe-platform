@@ -29,14 +29,22 @@ export function PostLikesModal({ postId, onClose }: PostLikesModalProps) {
       collection(db, "posts", postId, "likes"),
       orderBy("createdAt", "desc")
     )
-    const unsub = onSnapshot(q, (snap) => {
-      const items = snap.docs.map(doc => ({
-        userId: doc.id,
-        ...doc.data()
-      })) as LikeItem[]
-      setLikes(items)
-      setLoading(false)
-    })
+    const unsub = onSnapshot(
+      q,
+      (snap) => {
+        const items = snap.docs.map(doc => ({
+          userId: doc.id,
+          ...doc.data()
+        })) as LikeItem[]
+        setLikes(items)
+        setLoading(false)
+      },
+      (err) => {
+        console.warn("Likes list listen error (expected if offline or unauthorized):", err)
+        setLikes([])
+        setLoading(false)
+      }
+    )
     return () => unsub()
   }, [postId])
 

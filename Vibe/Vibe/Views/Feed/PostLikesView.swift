@@ -11,10 +11,12 @@ struct LikeItem: Identifiable {
 
 struct PostLikesView: View {
     @Environment(\.dismiss) private var dismiss
+    @EnvironmentObject var authService: AuthService
     let postId: String
     
     @State private var likes: [LikeItem] = []
     @State private var isLoading = true
+    @State private var userNavTag: UserNavItem? = nil
     
     var body: some View {
         NavigationStack {
@@ -43,6 +45,10 @@ struct PostLikesView: View {
                                         .foregroundColor(AppColor.ink)
                                 }
                             }
+                            .contentShape(Rectangle())
+                            .onTapGesture {
+                                userNavTag = UserNavItem(userId: like.id)
+                            }
                             .padding(.vertical, 4)
                         }
                     }
@@ -51,6 +57,10 @@ struct PostLikesView: View {
             }
             .navigationTitle("Beğenenler")
             .navigationBarTitleDisplayMode(.inline)
+            .navigationDestination(item: $userNavTag) { item in
+                PublicProfileView(userId: item.userId)
+                    .environmentObject(authService)
+            }
             .toolbar {
                 ToolbarItem(placement: .topBarTrailing) {
                     Button("Kapat") { dismiss() }

@@ -49,10 +49,18 @@ export default function NotificationsPage() {
       orderBy("createdAt", "desc"),
       limit(50)
     )
-    const unsub = onSnapshot(q, snap => {
-      setNotifs(snap.docs.map(d => ({ id: d.id, ...d.data() } as Notif)))
-      setFetching(false)
-    })
+    const unsub = onSnapshot(
+      q,
+      snap => {
+        setNotifs(snap.docs.map(d => ({ id: d.id, ...d.data() } as Notif)))
+        setFetching(false)
+      },
+      err => {
+        console.warn("Notifications fetch blocked (expected in demo mode):", err)
+        setNotifs([])
+        setFetching(false)
+      }
+    )
     return unsub
   }, [user])
 
@@ -61,9 +69,13 @@ export default function NotificationsPage() {
     if (!user || notifs.length === 0) return
     const unread = notifs.filter(n => !n.read)
     if (unread.length === 0) return
-    const batch = writeBatch(db)
-    unread.forEach(n => batch.update(doc(db, "notifications", user.uid, "items", n.id), { read: true }))
-    batch.commit()
+    try {
+      const batch = writeBatch(db)
+      unread.forEach(n => batch.update(doc(db, "notifications", user.uid, "items", n.id), { read: true }))
+      batch.commit().catch((e) => console.warn("Failed to commit notification read state:", e))
+    } catch (e) {
+      console.warn("Notification batch mark-as-read failed:", e)
+    }
   }, [user, notifs])
 
   if (loading || fetching) {

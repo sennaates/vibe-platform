@@ -44,26 +44,42 @@ export default function PostDetailPage({ params }: { params: Promise<{ id: strin
   const inputRef                  = useRef<HTMLInputElement>(null)
 
   useEffect(() => {
-    getDoc(doc(db, "posts", id)).then(snap => {
-      if (snap.exists()) {
-        const data = normalizePost({ id: snap.id, ...snap.data() } as Parameters<typeof normalizePost>[0])
-        setPost(data)
-        setLikes(data.likesCount)
-      }
-    })
+    getDoc(doc(db, "posts", id))
+      .then(snap => {
+        if (snap.exists()) {
+          const data = normalizePost({ id: snap.id, ...snap.data() } as Parameters<typeof normalizePost>[0])
+          setPost(data)
+          setLikes(data.likesCount)
+        }
+      })
+      .catch(err => {
+        console.warn("Post detail load failed (expected if offline or permission denied):", err)
+      })
   }, [id])
 
   // Check if current user liked this post
   useEffect(() => {
     if (!user) return
-    getDoc(doc(db, "posts", id, "likes", user.uid)).then(snap => setLiked(snap.exists()))
+    getDoc(doc(db, "posts", id, "likes", user.uid))
+      .then(snap => setLiked(snap.exists()))
+      .catch(err => {
+        console.warn("Check post liked state failed:", err)
+        setLiked(false)
+      })
   }, [id, user])
 
   useEffect(() => {
     const q = query(collection(db, "posts", id, "comments"), orderBy("createdAt", "asc"))
-    return onSnapshot(q, snap => {
-      setComments(snap.docs.map(d => ({ id: d.id, ...d.data() } as Comment)))
-    })
+    return onSnapshot(
+      q,
+      snap => {
+        setComments(snap.docs.map(d => ({ id: d.id, ...d.data() } as Comment)))
+      },
+      err => {
+        console.warn("Comments snapshot listen blocked (expected in demo/offline mode):", err)
+        setComments([])
+      }
+    )
   }, [id])
 
   const isOwnPost = user?.uid === post?.userId

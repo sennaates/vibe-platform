@@ -28,6 +28,13 @@ export default function GalleryPage() {
   const lastDocRef                  = useRef<QueryDocumentSnapshot | null>(null)
   const sentinelRef                 = useRef<HTMLDivElement>(null)
 
+  // Load local posts as fallback
+  const getLocalPosts = useCallback(() => {
+    if (typeof window === "undefined" || !user) return []
+    const local = JSON.parse(localStorage.getItem("vibe_local_posts") ?? "[]") as NormalizedPost[]
+    return local.filter(p => p.userId === user.uid)
+  }, [user])
+
   useEffect(() => {
     if (!user) {
       setTimeout(() => setFetching(false), 0)
@@ -39,33 +46,51 @@ export default function GalleryPage() {
       orderBy("createdAt", "desc"),
       limit(PAGE_SIZE)
     )
-    getDocs(q).then(snap => {
-      const fetched = snap.docs.map(d => normalizePost({ id: d.id, ...d.data() } as Parameters<typeof normalizePost>[0]))
-      lastDocRef.current = snap.docs[snap.docs.length - 1] ?? null
-      setHasMore(snap.docs.length === PAGE_SIZE)
-      setPosts(fetched)
-      setFetching(false)
-    })
-  }, [user])
+    getDocs(q)
+      .then(snap => {
+        const fetched = snap.docs.map(d => normalizePost({ id: d.id, ...d.data() } as Parameters<typeof normalizePost>[0]))
+        lastDocRef.current = snap.docs[snap.docs.length - 1] ?? null
+        setHasMore(snap.docs.length === PAGE_SIZE)
+        
+        const localUserPosts = getLocalPosts()
+        const merged = [...localUserPosts, ...fetched]
+        const unique = merged.filter((p, index, self) => self.findIndex(o => o.id === p.id) === index)
+        setPosts(unique)
+        setFetching(false)
+      })
+      .catch(err => {
+        console.error("Gallery initial fetch error:", err)
+        setPosts(getLocalPosts())
+        setFetching(false)
+      })
+  }, [user, getLocalPosts])
 
   const loadMore = useCallback(async () => {
     if (isLoadingMoreRef.current || !hasMore || !lastDocRef.current || !user) return
     isLoadingMoreRef.current = true
     setLoadingMore(true)
-    const q = query(
-      collection(db, "posts"),
-      where("userId", "==", user.uid),
-      orderBy("createdAt", "desc"),
-      startAfter(lastDocRef.current),
-      limit(PAGE_SIZE)
-    )
-    const snap = await getDocs(q)
-    const fetched = snap.docs.map(d => normalizePost({ id: d.id, ...d.data() } as Parameters<typeof normalizePost>[0]))
-    lastDocRef.current = snap.docs[snap.docs.length - 1] ?? null
-    setHasMore(snap.docs.length === PAGE_SIZE)
-    setPosts(prev => [...prev, ...fetched])
-    setLoadingMore(false)
-    isLoadingMoreRef.current = false
+    try {
+      const q = query(
+        collection(db, "posts"),
+        where("userId", "==", user.uid),
+        orderBy("createdAt", "desc"),
+        startAfter(lastDocRef.current),
+        limit(PAGE_SIZE)
+      )
+      const snap = await getDocs(q)
+      const fetched = snap.docs.map(d => normalizePost({ id: d.id, ...d.data() } as Parameters<typeof normalizePost>[0]))
+      lastDocRef.current = snap.docs[snap.docs.length - 1] ?? null
+      setHasMore(snap.docs.length === PAGE_SIZE)
+      setPosts(prev => {
+        const merged = [...prev, ...fetched]
+        return merged.filter((p, index, self) => self.findIndex(o => o.id === p.id) === index)
+      })
+    } catch (err) {
+      console.error("Gallery loadMore error:", err)
+    } finally {
+      setLoadingMore(false)
+      isLoadingMoreRef.current = false
+    }
   }, [hasMore, user])
 
   // Infinite scroll

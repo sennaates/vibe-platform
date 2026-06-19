@@ -33,7 +33,14 @@ export function Navbar() {
       collection(db, "notifications", user.uid, "items"),
       where("read", "==", false)
     )
-    const unsub = onSnapshot(q, snap => setUnread(snap.size))
+    const unsub = onSnapshot(
+      q, 
+      snap => setUnread(snap.size),
+      err => {
+        console.warn("Notifications subscription blocked (expected in demo/offline mode):", err)
+        setUnread(0)
+      }
+    )
     return unsub
   }, [user])
 

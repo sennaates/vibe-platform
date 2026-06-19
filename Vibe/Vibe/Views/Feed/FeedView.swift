@@ -11,8 +11,7 @@ struct FeedView: View {
     @StateObject private var feedService = FeedService.shared
     @State private var selectedTab = 1
     @State private var selectedPost: Post? = nil
-    @State private var profileUserId: String? = nil
-    @State private var isShowingProfile = false
+    @State private var profileUser: UserNavItem? = nil
     @State private var reportedPostId: String? = nil
     @State private var showReportConfirm = false
     @State private var hashtagNavTag: HashtagNavItem? = nil
@@ -44,8 +43,7 @@ struct FeedView: View {
                                         onLike: { toggleLike(post: post) },
                                         onComment: { selectedPost = post },
                                         onUserTap: {
-                                            profileUserId = post.userId
-                                            isShowingProfile = true
+                                            profileUser = UserNavItem(userId: post.userId)
                                         },
                                         onDelete: { deletePost(post) },
                                         onReport: {
@@ -116,12 +114,10 @@ struct FeedView: View {
                 PostDetailView(post: post, onLike: { toggleLike(post: post) })
                     .environmentObject(authService)
             }
-            .sheet(isPresented: $isShowingProfile) {
-                if let uid = profileUserId {
-                    NavigationStack {
-                        PublicProfileView(userId: uid)
-                            .environmentObject(authService)
-                    }
+            .sheet(item: $profileUser) { item in
+                NavigationStack {
+                    PublicProfileView(userId: item.userId)
+                        .environmentObject(authService)
                 }
             }
             .onAppear { startListening() }

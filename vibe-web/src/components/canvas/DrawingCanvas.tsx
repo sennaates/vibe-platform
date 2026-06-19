@@ -104,7 +104,10 @@ export function DrawingCanvas({ emotion, bpm, bg, onSave, onDiscard }: DrawingCa
     const color = params.palette[colorIndex.current % params.palette.length]
     const alpha = Math.round(params.opacity * 255).toString(16).padStart(2, "0")
     ctx.save()
-    if (params.blur > 0) ctx.filter = `blur(${params.blur}px)`
+    if (params.blur > 0) {
+      ctx.shadowBlur = params.blur * 2
+      ctx.shadowColor = color + alpha
+    }
     ctx.strokeStyle = color + alpha
     ctx.lineWidth = width
     ctx.lineCap = "round"

@@ -297,6 +297,16 @@ struct PublicProfileView: View {
 
     private func load() {
         let group = DispatchGroup()
+        
+        // Defansif zaman aşımı: Eğer 4.0 saniye içinde veriler yüklenmezse isLoading'i false yap
+        var hasFinished = false
+        
+        DispatchQueue.main.asyncAfter(deadline: .now() + 4.0) {
+            if !hasFinished {
+                print("PublicProfileView: Yükleme zaman aşımına uğradı, fallback devreye giriyor.")
+                self.isLoading = false
+            }
+        }
 
         group.enter()
         Firestore.firestore().collection("users").document(userId).getDocument { snapshot, _ in
@@ -322,7 +332,10 @@ struct PublicProfileView: View {
             }
         }
 
-        group.notify(queue: .main) { self.isLoading = false }
+        group.notify(queue: .main) {
+            hasFinished = true
+            self.isLoading = false
+        }
     }
 
     private func loadMorePosts() {

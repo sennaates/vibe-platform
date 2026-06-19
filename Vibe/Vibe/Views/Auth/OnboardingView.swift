@@ -85,6 +85,10 @@ struct OnboardingView: View {
                         color: pages[currentPage].color
                     ) {
                         if currentPage < pages.count - 1 {
+                            if currentPage == 1 {
+                                // Request HealthKit authorization when they learn about heart rate measuring
+                                BiometricService().requestAuthorization()
+                            }
                             withAnimation { currentPage += 1 }
                         } else {
                             onFinish()

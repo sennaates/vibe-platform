@@ -10,9 +10,9 @@ export function LandingPage() {
   // Simulator state
   const [selectedEmotion, setSelectedEmotion] = useState<EmotionState>(EMOTIONS[1]) // Default to "Mutlu"
   const [bpm, setBpm] = useState(80)
-  const [isDrawing, setIsDrawing] = useState(false)
 
   const canvasRef = useRef<HTMLCanvasElement>(null)
+  const isDrawing = useRef(false)
   const lastPos = useRef<{ x: number; y: number } | null>(null)
   const colorIndex = useRef(0)
 
@@ -67,7 +67,7 @@ export function LandingPage() {
       ctx.fillRect(0, 0, rect.width, rect.height)
     }
 
-    setIsDrawing(true)
+    isDrawing.current = true
     const pos = getPos(e)
     lastPos.current = pos
 
@@ -80,7 +80,7 @@ export function LandingPage() {
 
   const draw = useCallback((e: React.MouseEvent | React.TouchEvent) => {
     e.preventDefault()
-    if (!isDrawing || !lastPos.current) return
+    if (!isDrawing.current || !lastPos.current) return
     const canvas = canvasRef.current
     const ctx = canvas?.getContext("2d")
     if (!canvas || !ctx) return
@@ -97,7 +97,10 @@ export function LandingPage() {
     const alpha = Math.round(brushParams.opacity * 255).toString(16).padStart(2, "0")
 
     ctx.save()
-    if (brushParams.blur > 0) ctx.filter = `blur(${brushParams.blur}px)`
+    if (brushParams.blur > 0) {
+      ctx.shadowBlur = brushParams.blur * 2
+      ctx.shadowColor = color + alpha
+    }
     ctx.strokeStyle = color + alpha
     ctx.lineWidth = width
     ctx.lineCap = "round"
@@ -117,10 +120,10 @@ export function LandingPage() {
     ctx.restore()
 
     lastPos.current = pos
-  }, [isDrawing, brushParams])
+  }, [brushParams])
 
   const endDraw = useCallback(() => {
-    setIsDrawing(false)
+    isDrawing.current = false
     lastPos.current = null
   }, [])
 
@@ -136,166 +139,145 @@ export function LandingPage() {
   return (
     <div className="bg-canvas min-h-screen flex flex-col text-ink antialiased">
       
-      {/* 1. Hero Section */}
-      <section className="relative overflow-hidden py-16 sm:py-24 border-b border-rim/60 bg-gradient-to-b from-surface/20 to-canvas">
+      {/* 1. Centered Hero Section */}
+      <section className="relative overflow-hidden py-20 sm:py-32 border-b border-rim/60 bg-gradient-to-b from-surface/20 via-surface/40 to-canvas">
         {/* Modern Dot Background Pattern */}
         <div className="absolute inset-0 bg-[radial-gradient(var(--rim)_1.5px,transparent_1.5px)] bg-[size:32px_32px] opacity-40 pointer-events-none" />
         
-        {/* Animated Background Gradients */}
-        <div className="absolute top-1/4 left-1/4 w-[300px] sm:w-[500px] h-[300px] sm:h-[500px] bg-gradient-to-br from-accent/12 to-orange-500/8 rounded-full blur-[100px] sm:blur-[140px] animate-pulse pointer-events-none" />
-        <div className="absolute bottom-1/3 right-1/4 w-[350px] sm:w-[550px] h-[350px] sm:h-[550px] bg-gradient-to-tr from-pink-500/12 to-indigo-500/8 rounded-full blur-[120px] sm:blur-[160px] animate-pulse pointer-events-none" style={{ animationDelay: "3s" }} />
+        {/* Animated fluid background gradients */}
+        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] sm:w-[900px] h-[400px] sm:h-[600px] bg-gradient-to-tr from-accent/15 via-orange-500/10 to-pink-500/15 rounded-full blur-[120px] sm:blur-[180px] animate-pulse pointer-events-none" />
         
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative">
-          <div className="grid grid-cols-1 lg:grid-cols-12 gap-12 items-center">
-            
-            {/* Left Col - Copy */}
-            <div className="lg:col-span-7 space-y-6 sm:space-y-8 text-center lg:text-left">
-              {/* Premium Glow Logo Badge */}
-              <div className="flex justify-center lg:justify-start">
-                <div className="relative group transition-transform duration-300 hover:scale-105 select-none">
-                  <div className="absolute -inset-1 bg-gradient-to-r from-accent via-orange-500 to-pink-500 rounded-[22px] blur-sm opacity-60 group-hover:opacity-100 transition duration-1000 group-hover:duration-200 animate-pulse pointer-events-none" />
-                  <div className="relative flex items-center gap-3.5 px-5 py-3 bg-surface/90 dark:bg-surface/95 backdrop-blur-md border border-rim/60 rounded-[18px] shadow-md">
-                    <div className="w-10 h-10 rounded-xl overflow-hidden shadow-inner shrink-0 relative border border-rim/40 group-hover:scale-105 group-hover:animate-heartbeat transition-transform duration-300">
-                      <Image src="/logo.png" alt="Vibe Logo" fill className="object-cover" />
-                    </div>
-                    <div className="text-left">
-                      <p className="font-black text-ink text-base tracking-tight leading-none flex items-center gap-1.5">
-                        Vibe
-                        <Sparkles size={13} className="text-amber-500 fill-current animate-pulse shrink-0" />
-                      </p>
-                      <span className="text-[10px] font-bold text-accent tracking-widest uppercase mt-1 block">Duygu & Ritim</span>
-                    </div>
-                  </div>
+        <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 relative text-center space-y-8">
+          {/* Logo Badge (Centered) */}
+          <div className="flex justify-center">
+            <div className="relative group transition-transform duration-300 hover:scale-105 select-none">
+              <div className="absolute -inset-1 bg-gradient-to-r from-accent via-orange-500 to-pink-500 rounded-[22px] blur-sm opacity-60 group-hover:opacity-100 transition duration-1000 group-hover:duration-200 animate-pulse pointer-events-none" />
+              <div className="relative flex items-center gap-3.5 px-6 py-3 bg-surface/85 dark:bg-surface/90 backdrop-blur-md border border-rim/60 rounded-[20px] shadow-md">
+                <div className="w-10 h-10 rounded-xl overflow-hidden shadow-inner shrink-0 relative border border-rim/40 group-hover:animate-heartbeat transition-transform duration-300">
+                  <Image src="/logo.png" alt="Vibe Logo" fill className="object-cover" />
                 </div>
-              </div>
-              
-              <h1 className="text-4xl sm:text-5xl lg:text-6xl font-extrabold tracking-tight leading-[1.12]">
-                Duyguların ve Kalp Ritmin <br />
-                <span className="text-transparent bg-clip-text bg-gradient-to-r from-accent via-orange-500 to-pink-500 drop-shadow-sm font-black">
-                  Sanata Dönüşsün
-                </span>
-              </h1>
-              
-              <p className="text-base sm:text-lg text-ink-muted max-w-xl mx-auto lg:mx-0 leading-relaxed">
-                Vibe, kalp atış hızınızla (BPM) ve seçtiğiniz anlık duygularla fırçasını şekillendiren benzersiz bir çizim deneyimidir. Hızınız, renginiz ve stiliniz ritminizle belirlenir.
-              </p>
-              
-              <div className="flex flex-col sm:flex-row gap-3 justify-center lg:justify-start">
-                <Link
-                  href="/auth"
-                  className="px-8 py-3.5 bg-accent text-white rounded-[16px] text-sm font-bold shadow-md hover:bg-accent-hover active:scale-[0.98] transition-all flex items-center justify-center gap-2"
-                >
-                  <Activity size={16} />
-                  Hemen Çizmeye Başla
-                </Link>
-                <Link
-                  href="/auth"
-                  className="px-8 py-3.5 bg-surface border border-rim text-ink font-semibold rounded-[16px] text-sm hover:bg-surface-muted transition-all flex items-center justify-center"
-                >
-                  Giriş Yap / Üye Ol
-                </Link>
-              </div>
-            </div>
-            
-            {/* Right Col - Premium Image with Floating Badge */}
-            <div className="lg:col-span-5 flex justify-center">
-              <div className="relative p-2.5 bg-surface/40 backdrop-blur-md border border-rim/80 rounded-[32px] shadow-xl overflow-hidden max-w-[400px] w-full aspect-square group">
-                {/* Glowing aura around image */}
-                <div className="absolute -inset-10 bg-gradient-to-tr from-accent/30 via-orange-500/10 to-pink-500/20 rounded-[50px] blur-3xl opacity-50 group-hover:opacity-80 transition duration-1000 group-hover:duration-500 pointer-events-none" />
-                <div className="absolute inset-0 bg-gradient-to-tr from-accent/20 to-pink-500/10 opacity-0 group-hover:opacity-100 transition-opacity duration-500 z-10 pointer-events-none" />
-                
-                <div className="w-full h-full relative rounded-[22px] overflow-hidden border border-rim/50 z-0 bg-surface">
-                  <Image
-                    src="/vibe_landing_hero.png"
-                    alt="Vibe Art Concept"
-                    fill
-                    priority
-                    sizes="(max-width: 1024px) 100vw, 40vw"
-                    className="object-cover group-hover:scale-105 transition-transform duration-700"
-                  />
-                </div>
-
-                {/* Floating status badge on the image */}
-                <div className="absolute bottom-6 left-6 right-6 bg-surface/85 dark:bg-surface/90 backdrop-blur-md border border-rim/60 rounded-2xl p-3 shadow-lg flex items-center justify-between transform translate-y-2 group-hover:translate-y-0 opacity-95 group-hover:opacity-100 transition-all duration-500 z-20 select-none">
-                  <div className="flex items-center gap-2.5">
-                    <div className="w-8 h-8 rounded-full bg-accent/10 dark:bg-accent/20 flex items-center justify-center text-accent">
-                      <Heart size={14} className="fill-current animate-heartbeat" />
-                    </div>
-                    <div className="text-left">
-                      <p className="text-[10px] font-medium text-ink-subtle leading-none">Ritim Senkronu</p>
-                      <p className="text-xs font-bold text-ink mt-0.5">120 BPM • Mutlu</p>
-                    </div>
-                  </div>
-                  <span className="text-[10px] font-bold text-accent px-2 py-1 bg-accent/8 border border-accent/20 rounded-lg">Çizim Aktif</span>
+                <div className="text-left">
+                  <p className="font-black text-ink text-base tracking-tight leading-none flex items-center gap-1.5">
+                    Vibe
+                    <Sparkles size={13} className="text-amber-500 fill-current animate-pulse shrink-0" />
+                  </p>
+                  <span className="text-[10px] font-bold text-accent tracking-widest uppercase mt-1 block">Duygu & Ritim</span>
                 </div>
               </div>
             </div>
-            
+          </div>
+          
+          <h1 className="text-4xl sm:text-6xl lg:text-7xl font-extrabold tracking-tight leading-[1.08] max-w-3xl mx-auto">
+            Ruhunun Renkleri ve <br />
+            <span className="text-transparent bg-clip-text bg-gradient-to-r from-accent via-orange-500 to-pink-500 drop-shadow-sm font-black">
+              Kalbinin Ritmiyle Çiz
+            </span>
+          </h1>
+          
+          <p className="text-base sm:text-xl text-ink-muted max-w-2xl mx-auto leading-relaxed">
+            Vibe, iç dünyanızı ve duygularınızı tuvale döken büyülü bir dijital sanat alanıdır. Kalp atışınız fırçanın vuruşuna yön verirken, hissettiğiniz her duygu benzersiz renk paletleriyle hayat bulur. Kendinizi ritmin akışına bırakın.
+          </p>
+          
+          {/* Action buttons (Centered) */}
+          <div className="flex flex-col sm:flex-row gap-4 justify-center items-center">
+            <Link
+              href="/auth"
+              className="w-full sm:w-auto px-10 py-4 bg-accent text-white rounded-[18px] text-base font-bold shadow-lg shadow-accent/20 hover:shadow-xl hover:shadow-accent/30 hover:-translate-y-0.5 active:translate-y-0 active:scale-[0.98] transition-all flex items-center justify-center gap-2 group"
+            >
+              <Activity size={18} className="group-hover:animate-pulse" />
+              Hemen Çizmeye Başla
+            </Link>
+            <Link
+              href="/auth"
+              className="w-full sm:w-auto px-10 py-4 bg-surface/60 backdrop-blur-md border border-rim text-ink font-semibold rounded-[18px] text-base hover:bg-surface-muted hover:-translate-y-0.5 active:translate-y-0 transition-all flex items-center justify-center"
+            >
+              Giriş Yap / Üye Ol
+            </Link>
           </div>
         </div>
       </section>
 
-      {/* 2. Interactive Brush Simulator */}
-      <section className="py-16 sm:py-24 border-b border-rim/60 bg-surface/30 relative">
-        <div className="max-w-6xl mx-auto px-4 sm:px-6 relative z-10">
-          <div className="text-center max-w-2xl mx-auto mb-12">
-            <h2 className="text-2xl sm:text-3xl font-extrabold text-ink">Fırça Simülatörü</h2>
-            <p className="text-sm sm:text-base text-ink-muted mt-2">
-              Giriş yapmadan önce Vibe çizim motorunu deneyimleyin. Bir duygu seçin ve kalp ritminizi değiştirip test edin!
+      {/* 2. Interactive Brush Simulator Section */}
+      <section className="py-20 sm:py-28 border-b border-rim/60 bg-surface/30 relative">
+        <div className="absolute inset-0 bg-[radial-gradient(var(--rim)_1.2px,transparent_1.2px)] bg-[size:48px_48px] opacity-15 pointer-events-none" />
+        
+        {/* Dynamic color blob trailing the selected emotion */}
+        <div 
+          className="absolute right-1/4 top-1/4 w-[400px] h-[400px] rounded-full blur-[160px] opacity-10 transition-all duration-1000 pointer-events-none"
+          style={{ backgroundColor: selectedEmotion.color }}
+        />
+
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 relative z-10">
+          <div className="text-center max-w-2xl mx-auto mb-16 space-y-3">
+            <p className="text-xs font-semibold text-accent uppercase tracking-widest">Çevrimiçi Deneyim</p>
+            <h2 className="text-3xl sm:text-4xl font-extrabold text-ink">Dijital Fırçanı Keşfet</h2>
+            <p className="text-sm sm:text-base text-ink-muted leading-relaxed">
+              Giriş yapmadan önce Vibe çizim motorunu deneyimleyin. Bir duygu seçip kalp ritminizi ayarlayın ve tuvale dokunun.
             </p>
           </div>
 
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-stretch">
             
-            {/* Simulator Controls (5/12 cols) */}
-            <div className="lg:col-span-5 flex flex-col gap-5 justify-between">
+            {/* Left Col - Controls (5/12 cols) */}
+            <div className="lg:col-span-5 flex flex-col gap-6">
               
-              {/* Emotion Selector */}
-              <div className="bg-surface border border-rim/80 rounded-[24px] p-5 shadow-sm">
-                <p className="text-xs font-bold text-ink-subtle uppercase tracking-widest mb-3">1. Duygu Seç</p>
-                <div className="grid grid-cols-5 gap-2">
-                  {EMOTIONS.slice(0, 10).map(e => (
-                    <button
-                      key={e.label}
-                      onClick={() => setSelectedEmotion(e)}
-                      className={`flex flex-col items-center gap-1 py-2 px-1 rounded-[12px] transition-all duration-150 active:scale-95 border ${
-                        selectedEmotion.label === e.label
-                          ? "border-accent/40 bg-accent/8 scale-105"
-                          : "border-transparent bg-surface-muted hover:bg-[#EDE9E3]"
-                      }`}
-                      style={selectedEmotion.label === e.label ? { borderColor: e.color + "50", backgroundColor: e.color + "12" } : {}}
-                    >
-                      <span className="text-xl">{e.emoji}</span>
-                      <span className="text-[9px] font-bold text-ink-muted text-center truncate w-full">{e.label}</span>
-                    </button>
-                  ))}
+              {/* Emotion Selector - Refined Circular Cards */}
+              <div className="bg-surface/70 backdrop-blur-md border border-rim/60 rounded-[28px] p-6 shadow-sm space-y-4">
+                <div className="flex items-center justify-between">
+                  <p className="text-xs font-extrabold text-ink-subtle uppercase tracking-widest">1. Duygu Modunu Seç</p>
+                  <span className="text-[10px] font-bold text-ink-muted bg-surface-muted px-2.5 py-0.5 rounded-full uppercase tracking-wider">{selectedEmotion.label}</span>
+                </div>
+                <div className="grid grid-cols-5 gap-3">
+                  {EMOTIONS.slice(0, 10).map(e => {
+                    const isSelected = selectedEmotion.label === e.label
+                    return (
+                      <button
+                        key={e.label}
+                        onClick={() => setSelectedEmotion(e)}
+                        className={`group relative flex flex-col items-center gap-1.5 py-3 px-1 rounded-[16px] transition-all duration-300 active:scale-95 border ${
+                          isSelected
+                            ? "shadow-md scale-105"
+                            : "border-transparent bg-surface-muted/50 hover:bg-surface-muted hover:scale-102"
+                        }`}
+                        style={{
+                          borderColor: isSelected ? `${e.color}50` : undefined,
+                          backgroundColor: isSelected ? `${e.color}10` : undefined,
+                          boxShadow: isSelected ? `0 6px 20px ${e.color}15` : undefined
+                        }}
+                      >
+                        {/* Selected Indicator Glow */}
+                        {isSelected && (
+                          <div 
+                            className="absolute inset-0 rounded-[16px] blur-sm opacity-50"
+                            style={{ border: `2.5px solid ${e.color}` }}
+                          />
+                        )}
+                        <span className="text-2xl transition-transform duration-300 group-hover:scale-110">{e.emoji}</span>
+                        <span className="text-[9px] font-extrabold text-ink-muted text-center truncate w-full group-hover:text-ink">{e.label}</span>
+                      </button>
+                    )
+                  })}
                 </div>
               </div>
 
-              {/* BPM Slider with Dynamic Sound Wave Pulse */}
+              {/* Heart rate & BPM slider */}
               <div 
-                className="bg-surface border rounded-[24px] p-5 shadow-sm transition-all duration-500 overflow-hidden relative group/bpm"
+                className="bg-surface/70 backdrop-blur-md border rounded-[28px] p-6 shadow-sm transition-all duration-500 relative overflow-hidden group/bpm"
                 style={{ 
                   borderColor: `${selectedEmotion.color}40`,
-                  boxShadow: `0 8px 30px ${selectedEmotion.color}08`, 
-                  background: `linear-gradient(135deg, var(--surface) 0%, ${selectedEmotion.color}06 100%)`
+                  boxShadow: `0 10px 30px ${selectedEmotion.color}08`, 
+                  background: `linear-gradient(135deg, var(--surface) 0%, ${selectedEmotion.color}08 100%)`
                 }}
               >
-                {/* Ambient dynamic color blob inside the card */}
-                <div 
-                  className="absolute -right-10 -bottom-10 w-24 h-24 rounded-full blur-[40px] opacity-15 transition-all duration-500 pointer-events-none group-hover/bpm:scale-150"
-                  style={{ backgroundColor: selectedEmotion.color }}
-                />
-
-                <div className="flex items-center justify-between mb-3 relative z-10">
-                  <div className="flex items-center gap-2 select-none" style={{ '--bpm-duration': `${60 / bpm}s` } as React.CSSProperties}>
+                <div className="flex items-center justify-between mb-4 relative z-10" style={{ '--bpm-duration': `${60 / bpm}s` } as React.CSSProperties}>
+                  <div className="flex items-center gap-2 select-none">
                     <p className="text-xs font-bold text-ink-subtle uppercase tracking-widest">2. Kalp Ritmini Ayarla</p>
                     {/* Bouncing EKG waves */}
                     <div className="flex items-end gap-[2px] h-3.5 shrink-0 mb-[1px]">
                       {[0.4, 0.9, 0.5, 0.8, 0.3].map((val, idx) => (
                         <span
                           key={idx}
-                          className="w-[2px] rounded-full animate-bpm-bounce origin-bottom"
+                          className="w-[2.5px] rounded-full origin-bottom animate-bpm-bounce"
                           style={{
                             backgroundColor: selectedEmotion.color,
                             height: `${val * 100}%`,
@@ -307,29 +289,33 @@ export function LandingPage() {
                   </div>
 
                   <span 
-                    className="text-xs font-extrabold flex items-center gap-2 px-3 py-1 bg-surface-muted rounded-full border border-rim/60 shadow-inner select-none transition-all duration-300"
+                    className="text-xs font-extrabold flex items-center gap-2 px-3.5 py-1.5 bg-surface-muted rounded-full border shadow-inner select-none transition-all duration-300"
                     style={{ 
                       color: selectedEmotion.color,
-                      borderColor: `${selectedEmotion.color}25`,
-                      "--bpm-duration": `${60 / bpm}s`
-                    } as React.CSSProperties}
+                      borderColor: `${selectedEmotion.color}25`
+                    }}
                   >
                     <span className="relative flex h-3.5 w-3.5 items-center justify-center shrink-0">
-                      <span className="animate-bpm-ripple absolute inline-flex h-full w-full rounded-full bg-current opacity-60"></span>
-                      <Heart size={13} className="animate-bpm-pulse relative inline-flex fill-current text-current" />
+                      <span 
+                        className="absolute inline-flex h-full w-full rounded-full bg-current opacity-60 animate-bpm-ripple"
+                      ></span>
+                      <Heart 
+                        size={13} 
+                        className="relative inline-flex fill-current text-current animate-bpm-pulse"
+                      />
                     </span>
                     <span className="tabular-nums text-xs">{bpm} BPM</span>
                   </span>
                 </div>
 
-                <div className="relative my-4 z-10 flex items-center">
+                <div className="relative my-5 z-10 flex items-center">
                   <input
                     type="range"
                     min={40}
                     max={180}
                     value={bpm}
                     onChange={e => setBpm(Number(e.target.value))}
-                    className="w-full h-2 rounded-full appearance-none cursor-pointer transition-all duration-300 focus:outline-none"
+                    className="w-full h-2.5 rounded-full appearance-none cursor-pointer transition-all duration-300 focus:outline-none"
                     style={{ 
                       background: `linear-gradient(to right, ${selectedEmotion.color} 0%, ${selectedEmotion.color} ${((bpm - 40) / (180 - 40)) * 100}%, var(--rim) ${((bpm - 40) / (180 - 40)) * 100}%, var(--rim) 100%)`,
                       accentColor: selectedEmotion.color
@@ -337,54 +323,54 @@ export function LandingPage() {
                   />
                 </div>
 
-                <div className="flex justify-between text-[9px] font-bold text-ink-subtle mt-1.5 relative z-10">
+                <div className="flex justify-between text-[9px] font-bold text-ink-subtle mt-1 relative z-10">
                   <span className="transition-colors duration-300" style={{ color: bpm < 80 ? selectedEmotion.color : undefined }}>40 Sakin</span>
                   <span className="transition-colors duration-300" style={{ color: bpm >= 80 && bpm <= 130 ? selectedEmotion.color : undefined }}>110 Ritmik</span>
                   <span className="transition-colors duration-300" style={{ color: bpm > 130 ? selectedEmotion.color : undefined }}>180 Enerjik</span>
                 </div>
               </div>
 
-              {/* Active Brush Stats with Dynamic Aura */}
+              {/* Active Brush Instrument Panel */}
               <div 
-                className="bg-surface border border-rim/80 rounded-[24px] p-5 shadow-sm flex-1 flex flex-col justify-center transition-all duration-500"
+                className="bg-surface/70 backdrop-blur-md border rounded-[28px] p-6 shadow-sm flex-1 flex flex-col justify-center transition-all duration-500 relative overflow-hidden"
                 style={{ 
-                  boxShadow: `inset 0 0 20px ${selectedEmotion.color}05`,
+                  boxShadow: `inset 0 0 30px ${selectedEmotion.color}05`,
                   borderColor: `${selectedEmotion.color}25`
                 }}
               >
-                <p className="text-xs font-bold text-ink-subtle uppercase tracking-widest mb-3">Aktif Fırça Stili</p>
-                <div className="grid grid-cols-2 gap-4 text-xs">
-                  <div>
-                    <span className="text-ink-subtle block">Fırça Tipi:</span>
-                    <span className="font-semibold capitalize text-ink">
+                <p className="text-xs font-bold text-ink-subtle uppercase tracking-widest mb-4">Aktif Fırça Stili</p>
+                <div className="grid grid-cols-2 gap-y-4 gap-x-6 text-xs sm:text-sm">
+                  <div className="space-y-1">
+                    <span className="text-ink-subtle text-[10px] block font-bold uppercase tracking-wider">Fırça Tipi:</span>
+                    <span className="font-bold capitalize text-ink flex items-center gap-1.5">
                       {brushParams.strokeStyle === "sketchy" ? "Karalama ✏️" : brushParams.strokeStyle === "smooth" ? "Yumuşak 🌊" : "İşaretçi 🖊️"}
                     </span>
                   </div>
-                  <div>
-                    <span className="text-ink-subtle block">Boyut Aralığı:</span>
-                    <span className="font-semibold text-ink">{Math.round(brushParams.minWidth)}px – {Math.round(brushParams.maxWidth)}px</span>
+                  <div className="space-y-1">
+                    <span className="text-ink-subtle text-[10px] block font-bold uppercase tracking-wider">Boyut Aralığı:</span>
+                    <span className="font-bold text-ink">{Math.round(brushParams.minWidth)}px – {Math.round(brushParams.maxWidth)}px</span>
                   </div>
-                  <div>
-                    <span className="text-ink-subtle block">Opaklık (Valence):</span>
-                    <span className="font-semibold text-ink">%{Math.round(brushParams.opacity * 100)}</span>
+                  <div className="space-y-1">
+                    <span className="text-ink-subtle text-[10px] block font-bold uppercase tracking-wider">Opaklık (Valence):</span>
+                    <span className="font-bold text-ink">%{Math.round(brushParams.opacity * 100)}</span>
                   </div>
-                  <div>
-                    <span className="text-ink-subtle block">Yumuşatma (Blur):</span>
-                    <span className="font-semibold text-ink">{brushParams.blur > 0 ? `${brushParams.blur}px` : "Yok"}</span>
+                  <div className="space-y-1">
+                    <span className="text-ink-subtle text-[10px] block font-bold uppercase tracking-wider">Yumuşatma (Blur):</span>
+                    <span className="font-bold text-ink">{brushParams.blur > 0 ? `${brushParams.blur}px` : "Yok"}</span>
                   </div>
                 </div>
               </div>
-              
+
             </div>
 
-            {/* Sandbox Canvas (7/12 cols) with Dynamic Glow Border */}
-            <div className="lg:col-span-7 flex flex-col gap-2">
+            {/* Sandbox Canvas (7/12 cols) with Glowing Frame */}
+            <div className="lg:col-span-7 flex flex-col">
               <div 
-                className="relative border bg-[#FAF8F4] rounded-[24px] overflow-hidden shadow-lg flex-1 min-h-[350px] transition-all duration-500"
+                className="relative border bg-[#FAF8F4] rounded-[32px] overflow-hidden shadow-xl flex-1 min-h-[400px] transition-all duration-500 group/canvas"
                 style={{ 
-                  boxShadow: `0 10px 30px ${selectedEmotion.color}15`, 
-                  borderColor: `${selectedEmotion.color}40`,
-                  borderWidth: "1.5px"
+                  boxShadow: `0 15px 40px ${selectedEmotion.color}18`, 
+                  borderColor: `${selectedEmotion.color}50`,
+                  borderWidth: "2px"
                 }}
               >
                 <canvas
@@ -398,13 +384,22 @@ export function LandingPage() {
                   onTouchMove={draw}
                   onTouchEnd={endDraw}
                 />
-                <button
-                  onClick={clearCanvas}
-                  title="Temizle"
-                  className="absolute bottom-4 right-4 p-2.5 rounded-[12px] bg-surface border border-rim hover:bg-surface-muted text-ink-muted active:scale-95 transition-all shadow-sm z-10"
-                >
-                  <Trash2 size={16} />
-                </button>
+                
+                {/* Floating controls in Sandbox */}
+                <div className="absolute top-4 left-4 right-4 flex items-center justify-between pointer-events-none select-none z-10">
+                  <div className="flex items-center gap-2 px-3.5 py-2 bg-surface/80 backdrop-blur-md border border-rim/60 rounded-xl text-xs font-semibold text-ink shadow-sm pointer-events-auto">
+                    <Palette size={13} style={{ color: selectedEmotion.color }} />
+                    <span>Tuval Modu</span>
+                  </div>
+                  
+                  <button
+                    onClick={clearCanvas}
+                    title="Temizle"
+                    className="p-2.5 rounded-xl bg-surface border border-rim hover:bg-surface-muted text-ink-muted active:scale-95 transition-all shadow-sm pointer-events-auto"
+                  >
+                    <Trash2 size={16} />
+                  </button>
+                </div>
               </div>
             </div>
 
@@ -413,13 +408,14 @@ export function LandingPage() {
       </section>
 
       {/* 3. Features Grid */}
-      <section className="py-16 sm:py-24 border-b border-rim/60 relative">
+      <section className="py-20 sm:py-28 border-b border-rim/60 relative">
         <div className="absolute inset-0 bg-[radial-gradient(var(--rim)_1.2px,transparent_1.2px)] bg-[size:40px_40px] opacity-20 pointer-events-none" />
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
           
-          <div className="text-center max-w-2xl mx-auto mb-16">
-            <p className="text-xs font-semibold text-accent uppercase tracking-widest mb-1.5">Özellikler</p>
-            <h2 className="text-2xl sm:text-3xl font-extrabold text-ink">Sanatın Kalp Atışlarınla Şekillensin</h2>
+          <div className="text-center max-w-2xl mx-auto mb-16 space-y-3">
+            <p className="text-xs font-semibold text-accent uppercase tracking-widest">Özellikler</p>
+            <h2 className="text-3xl sm:text-4xl font-extrabold text-ink">Sanatın Kalp Atışlarınla Şekillensin</h2>
+            <p className="text-sm text-ink-muted">Vibe, duygularınızı dijital bir fırçayla birleştiren eşsiz özelliklere sahiptir.</p>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
@@ -452,7 +448,7 @@ export function LandingPage() {
         </div>
       </section>
 
-      {/* 4. Footer CTA */}
+      {/* 4. Footer */}
       <footer className="py-12 bg-surface/30 border-t border-rim/40 text-center space-y-4">
         <p className="text-sm text-ink-subtle">© {new Date().getFullYear()} Vibe. Tüm hakları saklıdır.</p>
         <div className="flex justify-center gap-4 text-xs font-medium text-ink-muted">
